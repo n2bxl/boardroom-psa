@@ -21,10 +21,7 @@ env/
 .streamlit/secrets.toml
 
 # --- Local data (SQLite, backups, etc.) ---
-data/
-*.db
-*.sqlite
-*.sqlite3
+data/*.db
 
 # --- Logs ---
 *.log
