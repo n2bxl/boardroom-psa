@@ -7,9 +7,9 @@ from core.version import __version__
 
 
 def render_sidebar(get_setting) -> None:
-    """Sidebar: New Ticket intake."""
+    """Sidebar: New Task intake."""
     with st.sidebar:
-        st.subheader("New Ticket")
+        st.subheader("New Task")
 
         with st.form("new_ticket_form", clear_on_submit=True):
             t_title = st.text_input("Summary")
@@ -23,7 +23,7 @@ def render_sidebar(get_setting) -> None:
                 height=int(get_setting("ticket_note_height")),
             )
 
-            submitted = st.form_submit_button("Create Ticket", use_container_width=True)
+            submitted = st.form_submit_button("Create Task", use_container_width=True)
 
             if submitted:
                 if not t_title.strip():

@@ -7,7 +7,7 @@ APP = {
     "layout": "wide"
 }
 
-DEFAULTS = {
+DEFAULTS = { # TODO: complete AI integrations
     # LLM
     "ollama_model": "llama3.2:latest",
     "llm_temperature": 0.2,
@@ -23,5 +23,9 @@ DEFAULTS = {
     "default_statuses": "OPEN",
 
     # Tabs
-    "tabs": ["Board", "Notes", "Settings"], # TODO: complete AI integrations
+    "tabs": ["Board", "Notes", "Settings"],
+
+    # Age + Staleness
+    "stale_days_threshold": 3,
+    "show_age_stale_columns": True,
 }

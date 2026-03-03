@@ -74,6 +74,11 @@ def ensure_columns() -> None:
                 "ALTER TABLE tasks ADD COLUMN updated_at TEXT;"
             )
 
+        if "waiting_reason" not in existing:
+            conn.execute(
+                "ALTER TABLE tasks ADD COLUMN waiting_reason TEXT;"
+            )
+
         # TODO: do you want PSA-like statuses? (instead of Open/Done)
         # we can keep current data and just start using new statuses going forward
 
@@ -87,6 +92,7 @@ class Task:
     created_at: str
     updated_at: Optional[str]
     queue: str = "Personal"
+    waiting_reason: Optional[str] = None
 
 @dataclass
 class Note:
@@ -152,7 +158,8 @@ def update_task(
         status: Optional[str] = None, 
         priority: Optional[str] = None, 
         due_date: Optional[str] = None, 
-        queue: Optional[str] = None
+        queue: Optional[str] = None,
+        waiting_reason: Optional[str] = None,
     ) -> None:
     
     fields = []
@@ -170,6 +177,9 @@ def update_task(
     if queue is not None:
         fields.append("queue = ?")
         params.append(queue)
+    if waiting_reason is not None:
+        fields.append("waiting_reason = ?")
+        params.append(waiting_reason)
 
     fields.append("updated_at = datetime('now')")
     q = f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?"

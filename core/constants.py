@@ -38,3 +38,11 @@ QUEUES = [
     "Health",
     "Money",
 ]
+
+# --- Waiting Reasons ---
+WAITING_REASONS = [
+    "Blocked",
+    "External",
+    "Scheduled",
+    "Other",
+]
