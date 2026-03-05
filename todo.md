@@ -1,5 +1,11 @@
 # TODO LIST:
-## Make AI Create Tasks Automatically
+
+## Current Bugs:
+### Waiting and Adding Waiting Reasons
+- When changing task status to "Waiting", there is no option to select from `WAITING_REASONS`
+    - Sidenote: consider adding Status dropdown to New Task in sidebar
+
+### Make AI Create Tasks Automatically
 Add a button inside each note:
 > "Extract tasks from this note"
 Flow:
@@ -8,7 +14,7 @@ Flow:
 3. Parse it
 4. Insert into SQLite
 
-## Add a Real "Home Dashboard" Layout
+### Add a Real "Home Dashboard" Layout
 Instead of tabs, build a main dashboard with:
 - 🔴 Overdue tasks
 - 🟡 Due today
@@ -16,7 +22,7 @@ Instead of tabs, build a main dashboard with:
 - Latest note
 - AI "Focus for Today" card
 
-## Add Memory + Semantic Search
+### Add Memory + Semantic Search
 Later level:
 - Embed your notes locally
 - Store vectors
@@ -34,30 +40,30 @@ Once the board is in place, these 3 add the most ConnectWise flavor:
 - New → In Progress → Waiting → Done
 - Waiting reason dropdown (Blocked, External, Scheduled)
 
-## AI Boardroom
+### AI Boardroom
 Create different "experts," each with a defined role and bias.
 
-Potential lineup:
-### The Strategist
+#### Potential lineup:
+##### The Strategist
 - Long-term thinking
 - Are we aligned with goals?
 - Are we working on the right things?
 
-### The Operator
+##### The Operator
 - What should be done today?
 - What's blocking execution?
 - What's overdue?
 
-### The CFO
+##### The CFO
 - Are we spending time on the highest ROI tasks?
 - Is this worth the effort?
 
-### The Wellness Officer
+##### The Wellness Officer
 - Are we overloaded?
 - Should something be deferred?
 - Burnout risk assessment
 
-### The Analyst
+##### The Analyst
 - Patterns in notes
 - Repeated themes
 - Inefficiencies
