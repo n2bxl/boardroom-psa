@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from core.time_utils import utc_now_iso
+
 DB_PATH = Path("data") / "life.db"
 
 def get_conn() -> sqlite3.Connection:
@@ -28,7 +30,7 @@ def init_db() -> None:
                 priority TEXT NOT NULL DEFAULT 'Medium',
                 due_date TEXT,
                 status TEXT NOT NULL DEFAULT 'New',
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                created_at TEXT NOT NULL,
                 updated_at TEXT
             );
             """
@@ -40,7 +42,7 @@ def init_db() -> None:
                 title TEXT NOT NULL,
                 body TEXT NOT NULL,
                 tags TEXT,
-                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                created_at TEXT NOT NULL
             );
             """
         )
@@ -50,7 +52,7 @@ def init_db() -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id INTEGER NOT NULL,
                 body TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                created_at TEXT NOT NULL,
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             );
             """
@@ -113,12 +115,31 @@ def add_task(
         title: str,
         priority: str,
         due_date: Optional[str],
-        queue: str = "Personal"
+        queue: str = "Personal",
+        status: str = "New",
+        waiting_reason: Optional[str] = None,
     ) -> int:
+    now_utc = utc_now_iso()
+
+    if status != "Waiting":
+        waiting_reason = None
+
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO tasks (title, priority, due_date, queue, status) VALUES (?, ?, ?, ?, 'New')",
-            (title.strip(), priority, due_date, queue)
+            """
+            INSERT INTO tasks (title, priority, due_date, queue, status, waiting_reason, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                title.strip(),
+                priority,
+                due_date,
+                queue,
+                status,
+                waiting_reason,
+                now_utc,
+                now_utc,
+            ),
         )
         return int(cur.lastrowid)
 
@@ -181,9 +202,10 @@ def update_task(
         fields.append("waiting_reason = ?")
         params.append(waiting_reason)
 
-    fields.append("updated_at = datetime('now')")
+    fields.append("updated_at = ?")
+    params.append(utc_now_iso())
+
     q = f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?"
-    params.append(task_id)
 
     with get_conn() as conn:
         conn.execute(q, params)
@@ -192,15 +214,18 @@ def add_ticket_note(task_id: int, body: str) -> None:
     body = body.strip()
     if not body:
         return
+
+    now_utc = utc_now_iso()
+
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO ticket_notes (task_id, body) VALUES (?, ?)",
-            (task_id, body),
+            "INSERT INTO ticket_notes (task_id, body, created_at) VALUES (?, ?, ?)",
+            (task_id, body, now_utc),
         )
         # Touch updated_at so the ticket shows recent activity
         conn.execute(
-            "UPDATE tasks SET updated_at = datetime('now') WHERE id = ?",
-            (task_id,),
+            "UPDATE tasks SET updated_at = ? WHERE id = ?",
+            (now_utc, task_id),
         )
 
 

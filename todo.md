@@ -4,7 +4,12 @@
 ### Waiting and Adding Waiting Reasons
 - When changing task status to "Waiting", there is no option to select from `WAITING_REASONS`
     - Sidenote: consider adding Status dropdown to New Task in sidebar
+### UTC time fix
+- Dates are correct, but time stamps are currently using UTC-6.
+    - Tasks created in CST should remain "true to the time zone."
+        - Ex: If I make a task in California at 2 PM and access it again in Texas, it should read as 1 PM, and vice versa.
 
+## Features to implement
 ### Make AI Create Tasks Automatically
 Add a button inside each note:
 > "Extract tasks from this note"
