@@ -160,10 +160,11 @@ def set_task_status(task_id: int, status:str) -> None:
         conn.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
 
 def add_note(title: str, body: str, tags: Optional[str]) -> None:
+    now_utc = utc_now_iso()
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO notes (title, body, tags) VALUES (?, ?, ?)",
-            (title.strip(), body.strip(), tags.strip() if tags else None)
+            "INSERT INTO notes (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
+            (title.strip(), body.strip(), tags.strip() if tags else None, now_utc)
         )
 
 def list_notes(limit: int = 50) -> list[Note]:

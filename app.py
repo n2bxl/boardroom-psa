@@ -17,16 +17,13 @@ from ui.settings import render_settings_tab
 def get_setting(key: str):
     return st.session_state.get(key, DEFAULTS[key])
 
-
 def init_settings():
     for k, v in DEFAULTS.items():
         st.session_state.setdefault(k, v)
 
-
 def get_default_queues():
     v = get_setting("default_queues")
     return QUEUES if v == "ALL" else v
-
 
 def get_default_statuses():
     v = get_setting("default_statuses")
@@ -35,7 +32,6 @@ def get_default_statuses():
     if v == "OPEN":
         return OPEN_STATUSES
     return v
-
 
 # --- Tabs ---
 def render_tabs():
@@ -47,15 +43,15 @@ def render_tabs():
             model_name=get_setting("ollama_model"),
             get_default_statuses=get_default_statuses,
             get_default_queues=get_default_queues,
+            get_setting=get_setting,
         ),
-        "Notes": lambda: render_notes(),
+        "Notes": lambda: render_notes(get_setting),
         "Settings": lambda: render_settings_tab(get_setting),
     }
 
     for tab_obj, name in zip(tabs, tab_names):
         with tab_obj:
             registry[name]()
-
 
 def main():
     init_db()
@@ -64,7 +60,6 @@ def main():
     st.title(APP["title"])
     render_sidebar(get_setting)
     render_tabs()
-
 
 st.set_page_config(page_title=APP["title"], page_icon=APP["page_icon"], layout=APP["layout"])
 

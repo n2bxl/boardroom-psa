@@ -54,7 +54,7 @@ def build_ai_context():
     all_open = [t for t in list_tasks() if t.status != "Done"]
     lines = []
     lines.append(f"DATE: {today_iso()}\n")
-    lines.append("OPEN TICKETS:")
+    lines.append("OPEN TASKS:")
     if all_open:
         for t in all_open[:12]:
             lines.append(
@@ -65,7 +65,12 @@ def build_ai_context():
     return "\n".join(lines)
 
 
-def render_board(model_name: str, get_default_statuses, get_default_queues):
+def render_board(
+        model_name: str, 
+        get_default_statuses, 
+        get_default_queues,
+        get_setting
+    ):
     st.subheader("Task Board")
 
     all_tasks = list_tasks()
@@ -107,31 +112,34 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     # Queue grid
     display_tz = resolve_timezone(st.session_state, DEFAULTS)
     rows = []
+    show_age_stale = bool(get_setting("show_age_stale_columns"))
 
     for t in filtered:
-        age_days = days_since(getattr(t, "created_at", None))
+        age_days = days_since(getattr(t, "created_at", None))    
         stale_days = days_since(
             getattr(t, "updated_at", None) or getattr(t, "created_at", None)
         )
 
-        rows.append(
-            {
-                "Overdue": "YES" if is_overdue(t.due_date) else "",
-                "Stale": stale_days if stale_days is not None else "",
-                "Age": age_days if age_days is not None else "",
-                "ID": t.id,
-                "Title": t.title,
-                "Status": t.status,
-                "Waiting Reason": (
-                    getattr(t, "waiting_reason", "") if t.status == "Waiting" else ""
-                ),
-                "Priority": t.priority,
-                "Queue": getattr(t, "queue", "Personal"),
-                "Due": t.due_date or "",
-                "Created": format_timestamp_for_display(getattr(t, "created_at", None), display_tz),
-                "Updated": format_timestamp_for_display(getattr(t, "updated_at", None), display_tz),
-            }
-        )
+        row = {
+            "ID": t.id,
+            "Title": t.title,
+            "Status": t.status,
+            "Priority": t.priority,
+            "Queue": getattr(t, "queue", "Personal"),
+            "Waiting Reason": (
+                getattr(t, "waiting_reason", "") if t.status == "Waiting" else ""
+            ),
+            "Due": t.due_date or "",
+            "Created": format_timestamp_for_display(getattr(t, "created_at", None), display_tz),
+            "Updated": format_timestamp_for_display(getattr(t, "updated_at", None), display_tz),
+            "Overdue": "YES" if is_overdue(t.due_date) else "",
+        }
+
+        if show_age_stale:
+            row["Age"] = age_days if age_days is not None else ""
+            row["Stale"] = stale_days if stale_days is not None else ""
+
+        rows.append(row)
 
     df = pd.DataFrame(rows)
 
@@ -159,12 +167,12 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     st.markdown("### Task Details")
 
     if not filtered:
-        st.info("No tickets match your filters.")
+        st.info("No tasks match your filters.")
         return
 
     id_to_label = {t.id: f"{t.id} | {t.title}" for t in filtered}
     selected_id = st.selectbox(
-        "Select ticket",
+        "Select task",
         options=list(id_to_label.keys()),
         format_func=lambda i: id_to_label[i],
     )
@@ -187,7 +195,7 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     new_queue = top[3].selectbox(
         "Queue",
         QUEUES,
-        index=QUEUES.index(getattr(ticket, "waiting_reason", None))
+        index=QUEUES.index(getattr(ticket, "queue", "Personal"))
     )
 
     current_waiting_reason = getattr(ticket, "waiting_reason", None)
@@ -197,16 +205,13 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
         if current_waiting_reason in WAITING_REASONS:
             default_idx = WAITING_REASONS.index(current_waiting_reason)
 
-            new_waiting_reason = st.selectbox(
-                "Waiting reason",
-                WAITING_REASONS,
-                index=default_idx,
-            )
-        else:
-            new_waiting_reason = None
-
-    new_priority = top[2].selectbox("Priority", PRIORITIES, index=PRIORITIES.index(ticket.priority))
-    new_queue = top[3].selectbox("Queue", QUEUES, index=QUEUES.index(getattr(ticket, "queue", "Personal")))
+        new_waiting_reason = st.selectbox(
+            "Waiting reason",
+            WAITING_REASONS,
+            index=default_idx,
+        )
+    else:
+        new_waiting_reason = None
 
     d1, _ = st.columns([1, 2])
     new_due = d1.text_input("Due (YYYY-MM-DD or blank).", value=ticket.due_date or "")

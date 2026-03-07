@@ -56,6 +56,19 @@ def render_settings_tab(get_setting):
         step=10,
     )
 
+    st.session_state["note_body_height"] = st.slider(
+        "Notes body height",
+        min_value=120,
+        max_value=600,
+        value=int(get_setting("note_body_height")),
+        step=10,
+    )
+
+    st.session_state["show_age_stale_columns"] = st.checkbox(
+        "Show Age/Stale columns on board",
+        value=bool(get_setting("show_age_stale_columns")),
+    )
+
     st.divider()
     st.markdown("### Timezone")
 

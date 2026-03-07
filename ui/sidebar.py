@@ -16,12 +16,11 @@ def render_sidebar(get_setting) -> None:
             t_queue = st.selectbox("Queue", QUEUES)
             t_priority = st.selectbox("Priority", PRIORITIES, index=1)
             t_status = st.selectbox("Status", STATUS_ORDER, index=0)
-
-            if t_status == "Waiting":
-                t_waiting_reason = st.selectbox("Waiting Reason", WAITING_REASONS)
-            else:
-                t_waiting_reason = None
-
+            t_waiting_reason = st.selectbox(
+                "Waiting Reason",
+                WAITING_REASONS,
+                disabled=(t_status != "Waiting"),
+            )
             t_due = st.date_input("Due date", value=None)
 
             t_note = st.text_area(
@@ -42,7 +41,7 @@ def render_sidebar(get_setting) -> None:
                         due_date=str(t_due) if t_due else None,
                         queue=t_queue,
                         status=t_status,
-                        waiting_reason=t_waiting_reason,
+                        waiting_reason=t_waiting_reason if t_status == "Waiting" else None,
                     )
                     if t_note.strip():
                         add_ticket_note(ticket_id, t_note)
