@@ -180,7 +180,7 @@ def update_task(
         priority: Optional[str] = None, 
         due_date: Optional[str] = None, 
         queue: Optional[str] = None,
-        waiting_reason: Optional[str] = None,
+        waiting_reason: Optional[str] = "__UNCHANGED__",
     ) -> None:
     
     fields = []
@@ -198,7 +198,7 @@ def update_task(
     if queue is not None:
         fields.append("queue = ?")
         params.append(queue)
-    if waiting_reason is not None:
+    if waiting_reason != "__UNCHANGED__":
         fields.append("waiting_reason = ?")
         params.append(waiting_reason)
 
@@ -206,6 +206,7 @@ def update_task(
     params.append(utc_now_iso())
 
     q = f"UPDATE tasks SET {', '.join(fields)} WHERE id = ?"
+    params.append(task_id)
 
     with get_conn() as conn:
         conn.execute(q, params)

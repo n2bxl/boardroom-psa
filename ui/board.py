@@ -14,15 +14,22 @@ def today_iso() -> str:
 
 def days_since(iso_dt: str | None) -> int | None:
     """
-    Returns integer days since an ISO datetime string (SQLite: 'YYYY-MM-DD HH:MM:SS;).
-    Returns None if missing or invalid.
+    Returns integer days since a timestamp string.
+    Supports both naive SQLite timestamps and aware ISO timestamps.
     """
     if not iso_dt:
         return None
     try:
-        # SQLite returns "YYYY-MM-DD HH:MM:SS"
-        d = dt.datetime.fromisoformat(iso_dt.replace("Z", ""))
+        d = dt.datetime.fromisoformat(iso_dt.replace("Z", "+00:00"))
+
+        # If timestamp is timezone-aware, compare against aware "now"
+        if d.tzinfo is not None:
+            now = dt.datetime.now(dt.timezone.utc)
+            return (now - d.astimezone(dt.timezone.utc)).days
+        
+        # Otherwise, compare against naive "now"
         return (dt.datetime.now() - d).days
+
     except ValueError:
         return None
 
@@ -166,8 +173,23 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
 
     top = st.columns([2, 1, 1, 1])
     top[0].text_input("Title (read-only for now)", value=ticket.title, disabled=True)
-    new_status = top[1].selectbox("Status", STATUS_ORDER, index=STATUS_ORDER.index(ticket.status))
-    # waiting_reason_value = getattr(ticket, "waiting_reason", None)
+    
+    new_status = top[1].selectbox(
+        "Status",
+        STATUS_ORDER,
+        index=STATUS_ORDER.index(ticket.status),
+    )
+    new_priority = top[2].selectbox(
+        "Priority",
+        PRIORITIES,
+        index=PRIORITIES.index(ticket.priority),
+    )
+    new_queue = top[3].selectbox(
+        "Queue",
+        QUEUES,
+        index=QUEUES.index(getattr(ticket, "waiting_reason", None))
+    )
+
     current_waiting_reason = getattr(ticket, "waiting_reason", None)
 
     if new_status == "Waiting":
