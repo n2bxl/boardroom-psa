@@ -3,11 +3,11 @@ import datetime as dt
 import pandas as pd
 import streamlit as st
 
+from core.ai import daily_triage
 from core.constants import STATUS_ORDER, PRIORITIES, QUEUES, WAITING_REASONS
 from core.config import APP, DEFAULTS
 from core.db import list_tasks, update_task, list_ticket_notes, add_ticket_note
-from core.ai import daily_triage
-
+from core.time_utils import resolve_timezone, format_timestamp_for_display
 
 def today_iso() -> str:
     return str(dt.date.today())
@@ -98,6 +98,7 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     ]
 
     # Queue grid
+    display_tz = resolve_timezone(st.session_state, DEFAULTS)
     rows = []
 
     for t in filtered:
@@ -120,8 +121,8 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
                 "Priority": t.priority,
                 "Queue": getattr(t, "queue", "Personal"),
                 "Due": t.due_date or "",
-                "Created": getattr(t, "created_at", "") or "",
-                "Updated": getattr(t, "updated_at", "") or "",
+                "Created": format_timestamp_for_display(getattr(t, "created_at", None), display_tz),
+                "Updated": format_timestamp_for_display(getattr(t, "updated_at", None), display_tz),
             }
         )
 
@@ -166,12 +167,13 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     top = st.columns([2, 1, 1, 1])
     top[0].text_input("Title (read-only for now)", value=ticket.title, disabled=True)
     new_status = top[1].selectbox("Status", STATUS_ORDER, index=STATUS_ORDER.index(ticket.status))
-    waiting_reason_value = getattr(ticket, "waiting_reason", None)
+    # waiting_reason_value = getattr(ticket, "waiting_reason", None)
+    current_waiting_reason = getattr(ticket, "waiting_reason", None)
 
     if new_status == "Waiting":
         default_idx = 0
-        if waiting_reason_value in WAITING_REASONS:
-            default_idx = WAITING_REASONS.index(waiting_reason_value)
+        if current_waiting_reason in WAITING_REASONS:
+            default_idx = WAITING_REASONS.index(current_waiting_reason)
 
             new_waiting_reason = st.selectbox(
                 "Waiting reason",
@@ -192,7 +194,13 @@ def render_board(model_name: str, get_default_statuses, get_default_queues):
     existing_notes = list_ticket_notes(ticket.id, limit=25)
     if existing_notes:
         for note in existing_notes:
-            with st.expander(f"{note.created_at}", expanded=False):
+            with st.expander(
+                format_timestamp_for_display(
+                    note.created_at,
+                    display_tz
+                ),
+                expanded=False
+            ):
                 st.write(note.body)
     else:
         st.info("No notes yet. Add the first worklog entry below.")

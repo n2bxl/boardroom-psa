@@ -1,7 +1,7 @@
 from __future__ import annotations
 import streamlit as st
 
-from core.constants import QUEUES, PRIORITIES
+from core.constants import QUEUES, PRIORITIES, STATUS_ORDER, WAITING_REASONS
 from core.db import add_task, add_ticket_note
 from core.version import __version__
 
@@ -15,6 +15,13 @@ def render_sidebar(get_setting) -> None:
             t_title = st.text_input("Summary")
             t_queue = st.selectbox("Queue", QUEUES)
             t_priority = st.selectbox("Priority", PRIORITIES, index=1)
+            t_status = st.selectbox("Status", STATUS_ORDER, index=0)
+
+            if t_status == "Waiting":
+                t_waiting_reason = st.selectbox("Waiting Reason", WAITING_REASONS)
+            else:
+                t_waiting_reason = None
+
             t_due = st.date_input("Due date", value=None)
 
             t_note = st.text_area(
@@ -34,6 +41,8 @@ def render_sidebar(get_setting) -> None:
                         priority=t_priority,
                         due_date=str(t_due) if t_due else None,
                         queue=t_queue,
+                        status=t_status,
+                        waiting_reason=t_waiting_reason,
                     )
                     if t_note.strip():
                         add_ticket_note(ticket_id, t_note)

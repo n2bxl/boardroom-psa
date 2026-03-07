@@ -57,6 +57,21 @@ def render_settings_tab(get_setting):
     )
 
     st.divider()
+    st.markdown("### Timezone")
+
+    st.session_state["use_system_timezone"] = st.checkbox(
+        "Use system timezone",
+        value=bool(get_setting("use_system_timezone")),
+    )
+
+    st.session_state["timezone_override"] = st.text_input(
+        "Manual timezone override",
+        value=str(get_setting("timezone_override")),
+        placeholder="America/Chicago",
+        help="Leave blank to use the system timezone. Examples: America/Chicago, America/New_York",
+    )
+
+    st.divider()
     if st.button("Reset to defaults", use_container_width=True):
         for k, v in DEFAULTS.items():
             st.session_state[k] = v

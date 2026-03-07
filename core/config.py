@@ -28,4 +28,8 @@ DEFAULTS = { # TODO: complete AI integrations
     # Age + Staleness
     "stale_days_threshold": 3,
     "show_age_stale_columns": True,
+
+    # Time
+    "timezone_override": "",
+    "use_system_timezone": True,
 }
