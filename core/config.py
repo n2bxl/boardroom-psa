@@ -15,7 +15,7 @@ DEFAULTS = { # TODO: complete AI integrations
 
     # UI sizes
     "ai_context_height": 220,
-    "ticket_note_height": 120,
+    "task_note_height": 120,
     "note_body_height": 180,
 
     # Filters

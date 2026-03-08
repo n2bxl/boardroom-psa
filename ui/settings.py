@@ -48,11 +48,11 @@ def render_settings_tab(get_setting):
         step=10,
     )
 
-    st.session_state["ticket_note_height"] = st.slider(
-        "Ticket note entry height",
+    st.session_state["task_note_height"] = st.slider(
+        "Task note entry height",
         min_value=80,
         max_value=300,
-        value=int(get_setting("ticket_note_height")),
+        value=int(get_setting("task_note_height")),
         step=10,
     )
 

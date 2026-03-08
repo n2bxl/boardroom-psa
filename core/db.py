@@ -48,7 +48,7 @@ def init_db() -> None:
         )
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS ticket_notes (
+            CREATE TABLE IF NOT EXISTS task_notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id INTEGER NOT NULL,
                 body TEXT NOT NULL,
@@ -105,7 +105,7 @@ class Note:
     created_at: str
 
 @dataclass
-class TicketNote:
+class TaskNote:
     id: int
     task_id: int
     body: str
@@ -212,7 +212,7 @@ def update_task(
     with get_conn() as conn:
         conn.execute(q, params)
 
-def add_ticket_note(task_id: int, body: str) -> None:
+def add_task_note(task_id: int, body: str) -> None:
     body = body.strip()
     if not body:
         return
@@ -221,26 +221,43 @@ def add_ticket_note(task_id: int, body: str) -> None:
 
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO ticket_notes (task_id, body, created_at) VALUES (?, ?, ?)",
+            "INSERT INTO task_notes (task_id, body, created_at) VALUES (?, ?, ?)",
             (task_id, body, now_utc),
         )
-        # Touch updated_at so the ticket shows recent activity
+        # Touch updated_at so the task shows recent activity
         conn.execute(
             "UPDATE tasks SET updated_at = ? WHERE id = ?",
             (now_utc, task_id),
         )
 
 
-def list_ticket_notes(task_id: int, limit: int = 50) -> list[TicketNote]:
+def list_task_notes(task_id: int, limit: int = 50) -> list[TaskNote]:
     with get_conn() as conn:
         rows = conn.execute(
             """
             SELECT id, task_id, body, created_at
-            FROM ticket_notes
+            FROM task_notes
             WHERE task_id = ?
             ORDER BY created_at DESC
             LIMIT ?
             """,
             (task_id, limit),
         ).fetchall()
-    return [TicketNote(**dict(r)) for r in rows]
+    return [TaskNote(**dict(r)) for r in rows]
+
+def update_task_title(task_id: int, title: str) -> None:
+    clean_title = title.strip()
+    if not clean_title:
+        return
+
+    now_utc = utc_now_iso()
+
+    with get_conn() as conn:
+        conn.execute(
+            """
+            UPDATE tasks
+            Set title = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (clean_title, now_utc, task_id)
+        )

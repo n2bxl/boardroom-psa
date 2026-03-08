@@ -6,7 +6,7 @@ Anything that represents a fixed domain concept
 """
 
 
-# --- Ticket Statuses ---
+# --- Task Statuses ---
 STATUS_ORDER = [
     "New",
     "In Progress",
@@ -22,7 +22,7 @@ OPEN_STATUSES = [
 ]
 
 
-# --- Ticket Priorities ---
+# --- Task Priorities ---
 PRIORITIES = [
     "Low",
     "Medium",
@@ -41,7 +41,9 @@ QUEUES = [
 
 # --- Waiting Reasons ---
 WAITING_REASONS = [
+    "(Select reason)",
     "Blocked",
+    "Awaiting response",
     "External",
     "Scheduled",
     "Other",
