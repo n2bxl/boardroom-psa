@@ -1,13 +1,17 @@
+# ui/board.py
+
 from __future__ import annotations
 import datetime as dt
 import pandas as pd
 import streamlit as st
 
 from core.ai import daily_triage
-from core.constants import STATUS_ORDER, PRIORITIES, QUEUES, WAITING_REASONS
-from core.config import APP, DEFAULTS
-from core.db import list_tasks, update_task, list_task_notes, add_task_note, update_task_title
+from core.constants import STATUS_ORDER, PRIORITIES, PRIORITY_ICONS, QUEUES, WAITING_REASONS, OPEN_STATUSES
+from core.config import DEFAULTS
+from core.db import list_tasks, update_task, list_task_notes, add_task_note, update_task_title, get_task_time_total
 from core.time_utils import resolve_timezone, format_timestamp_for_display
+
+from ui.worklogs import render_task_note_entry, render_task_note_history, format_minutes
 
 def today_iso() -> str:
     return str(dt.date.today())
@@ -43,15 +47,16 @@ def is_overdue(due_date: str | None) -> bool:
 
 
 def compute_kpis(all_tasks):
-    open_like = [t for t in all_tasks if t.status != "Done"]
+    open_like = [t for t in all_tasks if t.status in OPEN_STATUSES]
     due_today = [t for t in open_like if (t.due_date == today_iso())]
     overdue = [t for t in open_like if is_overdue(t.due_date)]
     waiting = [t for t in open_like if t.status == "Waiting"]
     return open_like, due_today, overdue, waiting
 
 
-def build_ai_context():
-    all_open = [t for t in list_tasks() if t.status != "Done"]
+def build_ai_context(get_setting):
+    all_open = [t for t in list_tasks() if t.status in OPEN_STATUSES]
+    ai_context_task_limit = int(get_setting("ai_context_task_limit"))
     
     def task_score(task) -> int:
         score = 0
@@ -108,7 +113,7 @@ def build_ai_context():
 
     lines.append("OPEN TASKS (sorted by urgency):")
 
-    for t in scored_tasks[:20]:
+    for t in scored_tasks[:ai_context_task_limit]:
         overdue_flag = "yes" if is_overdue(t.due_date) else "no"
         due_today_flag = "yes" if t.due_date == today_iso() else "no"
         waiting_reason = getattr(t, "waiting_reason", "") if t.status == "Waiting" else ""
@@ -119,18 +124,16 @@ def build_ai_context():
         score = task_score(t)
 
         lines.append(
-            f"""
-            - title={t.title} | 
-            status={t.status} | 
-            priority={t.priority} | 
-            queue={getattr(t, "queue", "Personal")} | 
-            due={t.due_date or "none"} | 
-            due_today={due_today_flag} | 
-            overdue={overdue_flag} | 
-            waiting_reason={waiting_reason or "none"} | 
-            stale_days={stale_days if stale_days is not None else 0} | 
-            urgency_score={score}
-            """
+            f"- title={t.title} — "
+            f"status={t.status} — "
+            f"priority={t.priority} — "
+            f"queue={getattr(t,'queue','Personal')} — "
+            f"due={t.due_date or 'none'} — "
+            f"due_today={due_today_flag} — "
+            f"overdue={overdue_flag} — "
+            f"waiting_reason={waiting_reason or 'none'} — "
+            f"stale_days={stale_days or 0} — "
+            f"urgency_score={score}"
         )
     
     return "\n".join(lines)
@@ -142,6 +145,9 @@ def render_board(
         get_setting
     ):
     st.subheader("Task Board")
+
+    if st.session_state.get("selected_task_id"):
+        st.caption("Opened from Home dashboard.")
 
     all_tasks = list_tasks()
     open_like, due_today, overdue, waiting = compute_kpis(all_tasks)
@@ -160,7 +166,10 @@ def render_board(
         if st.button("Run Daily Triage", use_container_width=True, key="run_daily_triage"):
             try:
                 with st.spinner("Running triage..."):
-                    report = daily_triage(model=model_name, context=build_ai_context())
+                    report = daily_triage(
+                        model=model_name, 
+                        context=build_ai_context(get_setting)
+                    )
                 st.markdown("### Triage Report")
                 st.write(report)
             except Exception as e:
@@ -189,20 +198,22 @@ def render_board(
         stale_days = days_since(
             getattr(t, "updated_at", None) or getattr(t, "created_at", None)
         )
+        total_minutes = get_task_time_total(t.id)
 
         row = {
             "Overdue": "YES" if is_overdue(t.due_date) else "",
             "Stale": "",
             "Age": "",
             "ID": t.id,
-            "Title": t.title,
+            "Title": f"{PRIORITY_ICONS.get(t.priority, '')} {t.title}".strip(),
             "Status": t.status,
-            "Priority": t.priority,
-            "Queue": getattr(t, "queue", "Personal"),
             "Waiting Reason": (
                 getattr(t, "waiting_reason", "") if t.status == "Waiting" else ""
             ),
+            "Priority": t.priority,
+            "Queue": getattr(t, "queue", "Personal"),
             "Due": t.due_date or "",
+            "Time Logged": format_minutes(total_minutes),
             "Created": format_timestamp_for_display(getattr(t, "created_at", None), display_tz),
             "Updated": format_timestamp_for_display(getattr(t, "updated_at", None), display_tz),
         }
@@ -225,7 +236,7 @@ def render_board(
         except ValueError:
             stale_val = 0
 
-        if stale_val >= stale_threshold and row.get("Status") != "Done":
+        if stale_val >= stale_threshold and row.get("Status") in OPEN_STATUSES:
             return ["font-weight: 700"] * len(row)
         return [""] * len(row)
 
@@ -242,12 +253,25 @@ def render_board(
         st.info("No tasks match your filters.")
         return
 
-    id_to_label = {t.id: f"{t.id} | {t.title}" for t in filtered}
+    id_to_label = {t.id: f"{t.id} — {t.title}" for t in filtered}
+    task_options = list(id_to_label.keys())
+
+    preselected_task_id = st.session_state.get("selected_task_id", None)
+
+    default_index = 0
+    if preselected_task_id in task_options:
+        default_index = task_options.index(preselected_task_id)
+
     selected_id = st.selectbox(
-        "Select or search tasks",
-        options=list(id_to_label.keys()),
+        "Select task",
+        options=task_options,
         format_func=lambda i: id_to_label[i],
+        index=default_index,
     )
+
+    # Clear the jump target after it has been used once
+    if preselected_task_id == selected_id:
+        st.session_state["selected_task_id"] = None
 
     task = next(t for t in all_tasks if t.id == selected_id)
 
@@ -289,31 +313,14 @@ def render_board(
     new_due = d1.text_input("Due (YYYY-MM-DD or blank).", value=task.due_date or "")
 
     st.markdown("### Task Notes")
+    total_minutes = get_task_time_total(task.id)
+    st.caption(f"Total time logged: {format_minutes(total_minutes)}")
 
-    existing_notes = list_task_notes(task.id, limit=25)
-    if existing_notes:
-        for note in existing_notes:
-            with st.expander(
-                format_timestamp_for_display(
-                    note.created_at,
-                    display_tz
-                ),
-                expanded=False
-            ):
-                st.write(note.body)
-    else:
-        st.info("No notes yet. Add the first worklog entry below.")
+    task_notes_limit = int(get_setting("task_notes_limit"))
 
-    with st.form(f"add_note_{task.id}", clear_on_submit=True):
-        note_body = st.text_area("Add a note / worklog", placeholder="What did you do? What did you learn? What's next?")
-        submitted = st.form_submit_button("Add Note")
-        if submitted:
-            if not note_body.strip():
-                st.warning("Note cannot be empty.")
-            else:
-                add_task_note(task.id, note_body)
-                st.success("Note added.")
-                st.rerun()
+    existing_notes = list_task_notes(task.id, limit=task_notes_limit)
+    render_task_note_history(existing_notes, display_tz, get_setting)
+    render_task_note_entry(task.id, add_task_note, get_setting)
 
     a1, a2, _ = st.columns([1, 1, 2])
     if a1.button("Save Changes", use_container_width=True):

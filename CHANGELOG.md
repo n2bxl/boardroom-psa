@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.5.2] - Polishing and Architecture Cleanup
+### Added
+- Home dashboard activity feed
+- Note preview system
+- Time loggin in task notes
+
+### Improved
+- AI triage prompt
+- Config-driven UI limits
+- Priority icon display
+
+### Fixed
+- Navigation jump-to-task
+- `session_state` bugs
+
 ## [0.5.0] - Core Task Workflow
 ### Added
 - Editable task titles

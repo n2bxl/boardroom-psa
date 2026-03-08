@@ -1,4 +1,5 @@
 # core/config.py
+
 from __future__ import annotations
 
 APP = {
@@ -8,10 +9,11 @@ APP = {
 }
 
 DEFAULTS = { # TODO: complete AI integrations
-    # LLM
+    # AI
     "ollama_model": "llama3.2:latest",
     "llm_temperature": 0.2,
     "llm_max_tokens": 512,
+    "ai_context_task_limit": 20,
 
     # UI sizes
     "ai_context_height": 220,
@@ -23,7 +25,7 @@ DEFAULTS = { # TODO: complete AI integrations
     "default_statuses": "OPEN",
 
     # Tabs
-    "tabs": ["Board", "Notes", "Settings"],
+    "tabs": ["Home", "Board", "Notes", "Settings"],
 
     # Age + Staleness
     "stale_days_threshold": 3,
@@ -32,4 +34,14 @@ DEFAULTS = { # TODO: complete AI integrations
     # Time
     "timezone_override": "",
     "use_system_timezone": True,
+
+    # Home
+    "recent_activity_limit": 8,
+    "note_preview_length": 50,
+    "today_focus_limit": 6,
+    "recent_notes_limit": 20,
+
+    # Worklog
+    "time_log_step_minutes": 5,
+    "task_notes_limit": 25,
 }

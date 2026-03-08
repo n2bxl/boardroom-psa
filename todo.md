@@ -1,13 +1,11 @@
 # TODO LIST:
 
 ## Current Bugs:
-### Waiting and Adding Waiting Reasons
-- When changing task status to "Waiting", there is no option to select from `WAITING_REASONS`
-    - Sidenote: consider adding Status dropdown to New Task in sidebar
-### UTC time fix
-- Dates are correct, but time stamps are currently using UTC-6.
-    - Tasks created in CST should remain "true to the time zone."
-        - Ex: If I make a task in California at 2 PM and access it again in Texas, it should read as 1 PM, and vice versa.
+### Notes
+- No ability to delete/modify notes
+
+### Settings
+- Changed settings are not reflected--potentially a missing "Save" and "Rerun" function
 
 ## Features to implement
 ### Make AI Create Tasks Automatically
@@ -44,6 +42,9 @@ Once the board is in place, these 3 add the most ConnectWise flavor:
 - Statuses with intent
 - New → In Progress → Waiting → Done
 - Waiting reason dropdown (Blocked, External, Scheduled)
+
+### Github-like Activity Monitor
+- Render a grid graphic similar to how Github tracks activity
 
 ### AI Boardroom
 Create different "experts," each with a defined role and bias.

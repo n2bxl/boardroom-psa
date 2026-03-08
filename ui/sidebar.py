@@ -1,4 +1,7 @@
+# ui/sidebar.py
+
 from __future__ import annotations
+
 import streamlit as st
 
 from core.constants import QUEUES, PRIORITIES, STATUS_ORDER, WAITING_REASONS

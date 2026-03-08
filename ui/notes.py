@@ -1,14 +1,20 @@
+# ui/notes.py
+
 from __future__ import annotations
+
 import streamlit as st
 
 from core.config import DEFAULTS
 from core.db import add_note, list_notes
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 
+from ui.text_utils import preview_text
 
 def render_notes(get_setting):
     st.subheader("Notes")
     display_tz = resolve_timezone(st.session_state, DEFAULTS)
+    preview_limit = int(get_setting("note_preview_length"))
+    recent_notes_limit = int(get_setting("recent_notes_limit"))
 
     with st.form("add_note_form", clear_on_submit=True):
         title = st.text_input("Title", placeholder="Quick note title")
@@ -28,9 +34,11 @@ def render_notes(get_setting):
                 st.success("Note saved")
 
     st.markdown("### Recent notes")
-    for n in list_notes(limit=20):
+    for n in list_notes(limit=recent_notes_limit):
+        preview = preview_text(n.body, preview_limit
+        )
         with st.expander(
-                f"{n.title} | {format_timestamp_for_display(n.created_at, display_tz)}"
+                f"{n.title} — {format_timestamp_for_display(n.created_at, display_tz)} — {preview}"
             ):
             if n.tags:
                 st.caption(f"Tags: {n.tags}")

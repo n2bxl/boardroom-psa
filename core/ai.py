@@ -1,4 +1,5 @@
 # core/ai.py
+
 from __future__ import annotations
 
 from langchain_ollama import ChatOllama

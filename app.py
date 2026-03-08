@@ -1,3 +1,5 @@
+# app.py
+
 from __future__ import annotations
 
 import streamlit as st
@@ -5,15 +7,14 @@ import streamlit as st
 from core.config import APP, DEFAULTS
 from core.constants import STATUS_ORDER, OPEN_STATUSES, QUEUES
 from core.db import init_db
-from core.version import __version__
 
-from ui.sidebar import render_sidebar
 from ui.board import render_board
+from ui.home import render_home
 from ui.notes import render_notes
 from ui.settings import render_settings_tab
+from ui.sidebar import render_sidebar
 
-
-# --- Settings helpers ---
+# --- Helpers ---
 def get_setting(key: str):
     return st.session_state.get(key, DEFAULTS[key])
 
@@ -33,12 +34,17 @@ def get_default_statuses():
         return OPEN_STATUSES
     return v
 
+def init_navigation_state():
+    st.session_state.setdefault("active_tab", "Home")
+    st.session_state.setdefault("selected_task_id", None)
+
 # --- Tabs ---
 def render_tabs():
     tab_names = get_setting("tabs")
     tabs = st.tabs(tab_names)
 
     registry = {
+        "Home": lambda: render_home(get_setting),
         "Board": lambda: render_board(
             model_name=get_setting("ollama_model"),
             get_default_statuses=get_default_statuses,
@@ -56,6 +62,7 @@ def render_tabs():
 def main():
     init_db()
     init_settings()
+    init_navigation_state()
 
     st.title(APP["title"])
     render_sidebar(get_setting)

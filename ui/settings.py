@@ -1,4 +1,7 @@
+# ui/settings.py
+
 from __future__ import annotations
+
 import streamlit as st
 
 from core.config import DEFAULTS
@@ -22,6 +25,14 @@ def render_settings_tab(get_setting):
         value=float(get_setting("llm_temperature")),
         step=0.05,
         help="Lower = more consistent. Higher = more creative.",
+    )
+
+    st.session_state["ai_context_task_limit"] = st.slider(
+        "AI context task count",
+        min_value=5,
+        max_value=50,
+        value=int(get_setting("ai_context_task_limit")),
+        step=1,
     )
 
     st.divider()
@@ -82,6 +93,59 @@ def render_settings_tab(get_setting):
         value=str(get_setting("timezone_override")),
         placeholder="America/Chicago",
         help="Leave blank to use the system timezone. Examples: America/Chicago, America/New_York",
+    )
+
+    st.divider()
+    st.markdown("### Home")
+
+    st.session_state["recent_activity_limit"] = st.slider(
+        "Recent Activity items",
+        min_value=3,
+        max_value=20,
+        value=int(get_setting("recent_activity_limit")),
+        step=1
+    )
+
+    st.session_state["note_preview_length"] = st.slider(
+        "Recent Activity preview length",
+        min_value=20,
+        max_value=250,
+        value=int(get_setting("note_preview_length")),
+        step=5,
+    )
+
+    st.session_state["today_focus_limit"] = st.slider(
+        "Today's Focus items",
+        min_value=3,
+        max_value=12,
+        value=int(get_setting("today_focus_limit")),
+        step=1
+    )
+    st.session_state["recent_notes_limit"] = st.slider(
+        "Recent Notes items",
+        min_value=5,
+        max_value=50,
+        value=int(get_setting("recent_notes_limit")),
+        step=5,
+    )
+
+    st.divider()
+    st.markdown("### Worklog")
+
+    st.session_state["time_log_step_minutes"] = st.slider(
+        "Time log step (minutes)",
+        min_value=1,
+        max_value=30,
+        value=int(get_setting("time_log_step_minutes")),
+        step=1,
+    )
+
+    st.session_state["task_notes_limit"] = st.slider(
+        "Task Notes history count",
+        min_value=5,
+        max_value=100,
+        value=int(get_setting("task_notes_limit")),
+        step=5,
     )
 
     st.divider()
