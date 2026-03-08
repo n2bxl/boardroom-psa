@@ -6,7 +6,7 @@ import datetime as dt
 import streamlit as st
 
 from core.config import DEFAULTS
-from core.constants import PRIORITY_ICONS
+from core.constants import PRIORITY_ICONS, OPEN_STATUSES
 from core.db import list_tasks, list_recent_task_activity
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 from ui.text_utils import preview_text
@@ -28,7 +28,7 @@ def is_overdue(due_date):
 def compute_kpis(tasks):
     open_tasks = [
         t for t in tasks
-        if t.status != "Done"
+        if t.status in OPEN_STATUSES
     ]
     due_today = [
         t for t in open_tasks
@@ -74,12 +74,12 @@ def render_home(get_setting):
 
     st.markdown("### Today's Focus")
 
-    focus = [t for t in tasks]
+    focus = [t for t in tasks if t.status in OPEN_STATUSES]
     focus = sorted(
         focus,
         key=lambda t: (
             t.priority != "High",
-            t.due_date or "9999-12-31",
+            dt.fromisoformat(t.due_date) if t.due_date else dt.max,
             t.title.lower(),
         ),
     )

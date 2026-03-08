@@ -9,7 +9,7 @@ We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 ### Added
 - Home dashboard activity feed
 - Note preview system
-- Time loggin in task notes
+- Time logging in task notes
 
 ### Improved
 - AI triage prompt
