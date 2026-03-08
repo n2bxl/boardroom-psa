@@ -79,7 +79,7 @@ def render_home(get_setting):
         focus,
         key=lambda t: (
             t.priority != "High",
-            dt.fromisoformat(t.due_date) if t.due_date else dt.max,
+            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.max,
             t.title.lower(),
         ),
     )

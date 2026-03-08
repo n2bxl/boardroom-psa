@@ -96,7 +96,7 @@ def build_ai_context(get_setting):
         all_open,
         key=lambda t: (
             -task_score(t),
-            dt.fromisoformat(t.due_date) if t.due_date else dt.max,
+            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.max,
             t.title.lower()
         ),
     )
