@@ -5,9 +5,26 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.5.0] - Core Task Workflow
+### Added
+- Editable task titles
+- Task waiting reasons
+- Task notes/worklog entries
+- Standalone Notes tab
+- AI Daily Triage report
+
+## Improved
+- Timezone-aware timestamp display
+- Dispatcher-style AI triage prompt
+- Configurable UI heights via Settings
+- Stale task highlighting
+
+## Refined
+- Unified terminology from "ticket" to "task"
+- Improved board filtering and KPI metrics
+- Cleaner prompt structure for AI outputs
 
 ## [0.4.0] – Modular PSA Foundation
-
 ### Added
 - Modular UI structure (`ui/` directory)
 - Centralized constants (`core/constants.py`)
