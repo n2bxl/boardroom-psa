@@ -75,37 +75,66 @@ def init_db() -> None:
 def ensure_columns() -> None:
     """Add new columns safely if the DB already exists."""
     with get_conn() as conn:
-        cols = conn.execute("PRAGMA table_info(tasks);").fetchall()
-        existing = {c["name"] for c in cols}
+        # --- TASKS ---
+        task_cols = conn.execute(
+            "PRAGMA table_info(tasks);"
+        ).fetchall()
+        task_existing = {c["name"] for c in task_cols}
 
-        # SQLite supports ADD COLUMN (no IF NOT EXISTS), so we check first.
-        if "queue" not in existing:
+        if "queue" not in task_existing:
             conn.execute(
-                "ALTER TABLE tasks ADD COLUMN queue TEXT NOT NULL DEFAULT 'Personal';"
+                "ALTER TABLE tasks ADD COLUMN queue TEST NOT NULL DEFAULT 'Personal';"
             )
 
-        if "updated_at" not in existing:
+        if "updated_at" not in task_existing:
             conn.execute(
                 "ALTER TABLE tasks ADD COLUMN updated_at TEXT;"
             )
 
-        if "waiting_reason" not in existing:
+        if "waiting_reason" not in task_existing:
             conn.execute(
                 "ALTER TABLE tasks ADD COLUMN waiting_reason TEXT;"
             )
 
-        note_cols = conn.execute(
-            "PRAGMA table_info(task_notes);"
-        ).fetchall()
-        note_existing = {c["name"] for c in note_cols}
-        if "time_spent_minutes" not in note_existing:
+        # --- TASK NOTES ---
+        task_note_cols = conn.execute("PRAGMA table_info(task_notes);").fetchall()
+        task_note_existing = {c["name"] for c in task_note_cols}
+
+        if "time_spent_minutes" not in task_note_existing:
             conn.execute(
                 "ALTER TABLE task_notes ADD COLUMN time_spent_minutes INTEGER;"
             )
 
-        # TODO: do you want PSA-like statuses? (instead of Open/Done)
-        # we can keep current data and just start using new statuses going forward
+        # --- NOTES ---
+        note_cols = conn.execute("PRAGMA table_info(notes);").fetchall()
+        note_existing = {c["name"] for c in note_cols}
 
+        if "updated_at" not in note_existing:
+            conn.execute(
+                "ALTER TABLE notes ADD COLUMN updated_at TEXT;"
+            )
+
+        if "task_id" not in note_existing:
+            conn.execute(
+                "ALTER TABLE notes ADD COLUMN task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL;"
+            )
+
+def get_task(task_id: int) -> Optional[Task]:
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM tasks
+            WHERE id = ?
+            """,
+            (task_id,),
+        ).fetchone()
+
+    if not row:
+        return None
+
+    return Task(**dict(row))
+    
 def get_task_time_total(task_id: int) -> int:
     with get_conn() as conn:
         row = conn.execute(
@@ -164,6 +193,8 @@ class Note:
     body: str
     tags: Optional[str]
     created_at: str
+    updated_at: Optional[str] = None
+    task_id: Optional[int] = None
 
 @dataclass
 class TaskNote:
@@ -227,19 +258,119 @@ def list_tasks(status: Optional[str] = None) -> list[Task]:
         rows = conn.execute(q, params).fetchall()
     return [Task(**dict(r)) for r in rows]
 
-def add_note(title: str, body: str, tags: Optional[str]) -> None:
+def add_note(
+    title: str,
+    body: str,
+    tags: Optional[str],
+    task_id: Optional[int]= None,
+) -> None:
     now_utc = utc_now_iso()
+    clean_tags = tags.strip() if tags and tags.strip() else None
+
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO notes (title, body, tags, created_at) VALUES (?, ?, ?, ?)",
-            (title.strip(), body.strip(), tags.strip() if tags else None, now_utc)
+            """
+            INSERT INTO notes (title, body, tags, task_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ? ,?)
+            """,
+            (
+                title.strip(),
+                body.strip(),
+                clean_tags,
+                task_id,
+                now_utc,
+                now_utc,
+            ),
         )
 
 def list_notes(limit: int = 50) -> list[Note]:
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT * FROM notes ORDER BY created_at DESC LIMIT ?", (limit,)
+            """
+            SELECT *
+            FROM notes
+            ORDER BY COALESCE(updated_at, created_at) DESC, created_at DESC
+            LIMIT ?
+            """,
+            (limit, ),
         ).fetchall()
+    return [Note(**dict(r)) for r in rows]
+
+def get_note(note_id: int) -> Optional[Note]:
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM notes
+            WHERE id = ?
+            """,
+            (note_id, ),
+        ).fetchone()
+
+    if not row:
+        return None
+
+    return Note(**dict(row))
+
+def update_note(
+    note_id: int,
+    title: str,
+    body:str,
+    tags: Optional[str],
+    task_id: Optional[int] = None,
+) -> None:
+    now_utc = utc_now_iso()
+    clean_tags = tags.strip() if tags and tags.strip() else None
+
+    with get_conn() as conn:
+        conn.execute(
+            """
+            UPDATE notes
+            SET title = ?, body = ?, tags = ?, task_id = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                title.strip(),
+                body.strip(),
+                clean_tags,
+                task_id,
+                now_utc,
+                note_id
+            ),
+        )
+
+def delete_note(note_id: int) -> None:
+    with get_conn() as conn:
+        conn.execute(
+            """
+            DELETE FROM notes
+            WHERE id = ?
+            """,
+            (note_id,),
+        )
+
+def search_notes(query: str, limit: int = 50) -> list[Note]:
+    search_term = f"%{query.strip()}%"
+
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM notes
+            WHERE title LIKE ?
+                OR body LIKE ?
+                OR COALESCE(tags, '') LIKE ?
+            ORDER BY COALESCE(updated_at, created_at) DESC, created_at DESC
+            LIMIT ?
+            """,
+            (
+                search_term,
+                search_term,
+                search_term,
+                limit
+            )
+        ).fetchall()
+
     return [Note(**dict(r)) for r in rows]
 
 def update_task(
@@ -319,6 +450,20 @@ def list_task_notes(task_id: int, limit: int = 50) -> list[TaskNote]:
             (task_id, limit),
         ).fetchall()
     return [TaskNote(**dict(r)) for r in rows]
+
+def list_recent_notes(limit: int = 5) -> list[Note]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM notes
+            ORDER BY COALESCE(updated_at, created_at) DESC, created_at DESC
+            LIMIT ?
+            """,
+            (limit, ),
+        ).fetchall()
+
+    return [Note(**dict(r)) for r in rows]
 
 def update_task_title(task_id: int, title: str) -> None:
     clean_title = title.strip()

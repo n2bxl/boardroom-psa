@@ -13,6 +13,9 @@ from core.time_utils import resolve_timezone, format_timestamp_for_display
 
 from ui.worklogs import render_task_note_entry, render_task_note_history, format_minutes
 
+def _consume_selected_task_id():
+    return st.session_state.pop("selected_task_id", None)
+
 def today_iso() -> str:
     return str(dt.date.today())
 
@@ -96,7 +99,7 @@ def build_ai_context(get_setting):
         all_open,
         key=lambda t: (
             -task_score(t),
-            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.max,
+            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.datetime.max,
             t.title.lower()
         ),
     )
@@ -146,7 +149,9 @@ def render_board(
     ):
     st.subheader("Task Board")
 
-    if st.session_state.get("selected_task_id"):
+    selected_task_id = _consume_selected_task_id()
+
+    if selected_task_id:
         st.caption("Opened from Home dashboard.")
 
     all_tasks = list_tasks()
@@ -163,14 +168,14 @@ def render_board(
     # Daily Triage
     with st.expander("Daily Triage (AI)", expanded=False):
         st.caption("Generates a dispatcher-style triage report from your current task queue.")
-        if st.button("Run Daily Triage", use_container_width=True, key="run_daily_triage"):
+        if st.button("Run Daily Triage", width="stretch", key="run_daily_triage"):
             try:
                 with st.spinner("Running triage..."):
                     report = daily_triage(
                         model=model_name, 
                         context=build_ai_context(get_setting)
                     )
-                st.markdown("### Triage Report")
+                # st.markdown("### Triage Report")
                 st.write(report)
             except Exception as e:
                 st.error(f"AI error: {e}")
@@ -242,9 +247,9 @@ def render_board(
 
     df = df.loc[:, ~(df.fillna("").eq("").all())]
     styled = df.style.apply(highlight_stale, axis=1)
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width="stretch", hide_index=True)
 
-    # st.dataframe(df, use_container_width=True, hide_index=True)
+    # st.dataframe(df, width="stretch", hide_index=True)
 
     st.divider()
     st.markdown("### Task Details")
@@ -253,10 +258,10 @@ def render_board(
         st.info("No tasks match your filters.")
         return
 
-    id_to_label = {t.id: f"{t.id} — {t.title}" for t in filtered}
+    id_to_label = {t.id: f"#{t.id} | {t.title}" for t in filtered}
     task_options = list(id_to_label.keys())
 
-    preselected_task_id = st.session_state.get("selected_task_id", None)
+    preselected_task_id = selected_task_id
 
     default_index = 0
     if preselected_task_id in task_options:
@@ -323,7 +328,7 @@ def render_board(
     render_task_note_entry(task.id, add_task_note, get_setting)
 
     a1, a2, _ = st.columns([1, 1, 2])
-    if a1.button("Save Changes", use_container_width=True):
+    if a1.button("Save Changes", width="stretch"):
         if new_title.strip() != task.title:
             update_task_title(task.id, new_title)
 
@@ -338,7 +343,7 @@ def render_board(
         st.success("Updated.")
         st.rerun()
 
-    if a2.button("Mark Done", use_container_width=True):
+    if a2.button("Mark Done", width="stretch"):
         update_task(task.id, status="Done")
         st.success("Closed.")
         st.rerun()

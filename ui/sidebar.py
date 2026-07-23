@@ -32,7 +32,7 @@ def render_sidebar(get_setting) -> None:
                 height=int(get_setting("task_note_height")),
             )
 
-            submitted = st.form_submit_button("Create Task", use_container_width=True)
+            submitted = st.form_submit_button("Create Task", width="stretch")
 
             if submitted:
                 if not t_title.strip():

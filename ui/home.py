@@ -7,7 +7,7 @@ import streamlit as st
 
 from core.config import DEFAULTS
 from core.constants import PRIORITY_ICONS, OPEN_STATUSES
-from core.db import list_tasks, list_recent_task_activity
+from core.db import list_tasks, list_recent_task_activity, list_recent_notes, get_task
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 from ui.text_utils import preview_text
 from ui.worklogs import format_minutes
@@ -47,7 +47,73 @@ def compute_kpis(tasks):
 
 def jump_to_task(task_id: int):
     st.session_state["selected_task_id"] = task_id
+    st.session_state.pop("selected_note_id", None)
+    st.session_state["active_tab"] = "Board"
     st.info("Task selected. Open the Board tab to view it.")
+
+def jump_to_note(note_id: int):
+    st.session_state["selected_note_id"] = note_id
+    st.session_state.pop("selected_task_id", None)
+    st.session_state["active_tab"] = "Notes"
+    st.info("Note selected. Open the Notes tab to view it.")
+
+def render_recent_tasks(items, display_tz: str, preview_limit: int):
+    st.markdown("#### Recent Tasks")
+
+    if not items:
+        st.info("No recent task activity.")
+        return
+
+    for item in items:
+        ts = format_timestamp_for_display(item.created_at, display_tz)
+        preview = preview_text(item.body, preview_limit)
+        icon = PRIORITY_ICONS.get(item.priority, "")
+
+        meta = f"{ts}"
+        if getattr(item, "time_spent_minutes", None):
+            meta = f"{meta} | {format_minutes(item.time_spent_minutes)}"
+
+        st.markdown(f"{icon} #{item.task_id} | **{item.task_title}**")
+        st.caption(meta)
+        st.write(preview)
+
+        if st.button("Open Task", key=f"recent_task_open_{item.id}", width="stretch"):
+            jump_to_task(item.task_id)
+        
+        st.divider()
+
+def render_recent_notes(items, display_tz: str, preview_limit: int):
+    st.markdown("#### Recent Notes")
+
+    if not items:
+        st.info("No recent notes.")
+        return
+
+    for note in items:
+        ts_source = note.updated_at or note.created_at
+        ts = format_timestamp_for_display(ts_source, display_tz)
+        preview = preview_text(note.body, preview_limit)
+
+        st.markdown(f"**{note.title}**")
+
+        meta_parts = [ts]
+        if note.tags:
+            meta_parts.append(f"Tags: {note.tags}")
+
+        if getattr(note, "task_id", None):
+            linked_task = get_task(note.task_id)
+            if linked_task:
+                meta_parts.append(f"Linked to {linked_task.title}")
+            else:
+                meta_parts.append(f"Linked to #{note.task_id}")
+
+        st.caption(" | ".join(meta_parts))
+        st.write(preview)
+
+        if st.button("Open Note", key=f"recent_note_open_{note.id}", width="stretch"):
+            jump_to_note(note.id)
+
+        st.divider()
 
 # --- Home ---
 
@@ -79,7 +145,7 @@ def render_home(get_setting):
         focus,
         key=lambda t: (
             t.priority != "High",
-            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.max,
+            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.datetime.max,
             t.title.lower(),
         ),
     )
@@ -93,7 +159,7 @@ def render_home(get_setting):
 
             c1.write(
                 f"""
-                {icon} — **{t.title}** — Status: {t.status}, Due: {t.due_date or '-'}
+                {icon} #{t.id} | **{t.title}** — Status: {t.status}, Due: {t.due_date or '-'}
                 """
             )
 
@@ -106,30 +172,23 @@ def render_home(get_setting):
 
     st.markdown("### Recent Activity")
 
-    activity = list_recent_task_activity(limit=recent_activity_limit)
+    recent_task_items = list_recent_task_activity(limit=recent_activity_limit)
+    recent_note_items = list_recent_notes(limit=recent_activity_limit)
 
     display_tz = resolve_timezone(st.session_state, DEFAULTS)
 
-    if not activity:
-        st.info("No recent activity.")
-    else:
-        for item in activity:
-            ts = format_timestamp_for_display(item.created_at, display_tz)
-            preview = preview_text(item.body, note_preview_length)
-            icon = PRIORITY_ICONS.get(item.priority, "")
+    left_col, right_col = st.columns(2)
 
-            label = f"{icon} — {ts} — {item.task_title}"
-            
-            if getattr(item, "time_spent_minutes", None):
-                label = f"{icon} — {ts} — {format_minutes(item.time_spent_minutes)} — {item.task_title}"
+    with left_col:
+        render_recent_tasks(
+            items=recent_task_items,
+            display_tz=display_tz,
+            preview_limit=note_preview_length,
+        )
 
-            label = f"{label} — {preview}"
-
-            c1, c2 = st.columns([6, 1])
-
-            with c1:
-                with st.expander(label):
-                    st.write(item.body)
-
-            if c2.button("Open", key=f"activity_open_{item.id}"):
-                jump_to_task(item.task_id)
+    with right_col:
+        render_recent_notes(
+            items=recent_note_items,
+            display_tz=display_tz,
+            preview_limit=note_preview_length,
+        )

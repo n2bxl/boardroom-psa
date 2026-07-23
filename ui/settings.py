@@ -149,7 +149,7 @@ def render_settings_tab(get_setting):
     )
 
     st.divider()
-    if st.button("Reset to defaults", use_container_width=True):
+    if st.button("Reset to defaults", width="stretch"):
         for k, v in DEFAULTS.items():
             st.session_state[k] = v
         st.success("Reset.")
