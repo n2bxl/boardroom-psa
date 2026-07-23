@@ -2,28 +2,17 @@
 
 from __future__ import annotations
 
-import datetime as dt
 import streamlit as st
 
 from core.config import DEFAULTS
 from core.constants import PRIORITY_ICONS, OPEN_STATUSES
 from core.db import list_tasks, list_recent_task_activity, list_recent_notes, get_task
+from core.date_utils import due_date_sort_key, is_due_today, is_overdue
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 from ui.text_utils import preview_text
 from ui.worklogs import format_minutes
 
 # --- Helpers ---
-
-def today_iso():
-    return str(dt.date.today())
-
-def is_overdue(due_date):
-    if not due_date:
-        return False
-    try:
-        return dt.date.fromisoformat(due_date) < dt.date.today()
-    except ValueError:
-        return False
 
 def compute_kpis(tasks):
     open_tasks = [
@@ -32,7 +21,7 @@ def compute_kpis(tasks):
     ]
     due_today = [
         t for t in open_tasks
-        if t.due_date == today_iso()
+        if is_due_today(t.due_date)
     ]
     overdue = [
         t for t in open_tasks
@@ -48,13 +37,11 @@ def compute_kpis(tasks):
 def jump_to_task(task_id: int):
     st.session_state["selected_task_id"] = task_id
     st.session_state.pop("selected_note_id", None)
-    st.session_state["active_tab"] = "Board"
     st.info("Task selected. Open the Board tab to view it.")
 
 def jump_to_note(note_id: int):
     st.session_state["selected_note_id"] = note_id
     st.session_state.pop("selected_task_id", None)
-    st.session_state["active_tab"] = "Notes"
     st.info("Note selected. Open the Notes tab to view it.")
 
 def render_recent_tasks(items, display_tz: str, preview_limit: int):
@@ -121,6 +108,7 @@ def render_home(get_setting):
     st.subheader("Home")
 
     recent_activity_limit = int(get_setting("recent_activity_limit"))
+    recent_notes_limit = int(get_setting("recent_notes_limit"))
     note_preview_length = int(get_setting("note_preview_length"))
     today_focus_limit = int(get_setting("today_focus_limit"))
 
@@ -145,7 +133,7 @@ def render_home(get_setting):
         focus,
         key=lambda t: (
             t.priority != "High",
-            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.datetime.max,
+            due_date_sort_key(t.due_date),
             t.title.lower(),
         ),
     )
@@ -173,7 +161,7 @@ def render_home(get_setting):
     st.markdown("### Recent Activity")
 
     recent_task_items = list_recent_task_activity(limit=recent_activity_limit)
-    recent_note_items = list_recent_notes(limit=recent_activity_limit)
+    recent_note_items = list_recent_notes(limit=recent_notes_limit)
 
     display_tz = resolve_timezone(st.session_state, DEFAULTS)
 

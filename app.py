@@ -35,8 +35,8 @@ def get_default_statuses():
     return v
 
 def init_navigation_state():
-    st.session_state.setdefault("active_tab", "Home")
     st.session_state.setdefault("selected_task_id", None)
+    st.session_state.setdefault("selected_note_id", None)
 
 # --- Tabs ---
 def render_tabs():

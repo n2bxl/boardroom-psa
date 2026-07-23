@@ -6,8 +6,16 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import HumanMessage, SystemMessage
 
 
-def make_llm(model: str, temperature: float = 0.2) -> ChatOllama:
-    return ChatOllama(model=model, temperature=temperature)
+def make_llm(
+        model: str,
+        temperature: float = 0.2,
+        max_tokens: int = 512,
+) -> ChatOllama:
+    return ChatOllama(
+        model=model,
+        temperature=temperature,
+        num_predict=max_tokens,
+    )
 
 
 def _base_system_prompt() -> str:
@@ -64,8 +72,15 @@ def _base_system_prompt() -> str:
     )
 
 
-def coach_reply(model: str, user_message: str, context: str, temperature: float = 0.2) -> str:
-    llm = make_llm(model=model, temperature=temperature)
+def coach_reply(
+        model: str, 
+        user_message: str, 
+        context: str, 
+        temperature: float = 0.2, 
+        max_tokens: int = 512
+    ) -> str:
+
+    llm = make_llm(model=model, temperature=temperature, max_tokens=max_tokens)
 
     system = SystemMessage(content=_base_system_prompt())
     human = HumanMessage(
@@ -93,13 +108,23 @@ def coach_reply(model: str, user_message: str, context: str, temperature: float 
     return result.content
 
 
-def daily_triage(model: str, context: str) -> str:
+def daily_triage(
+        model: str, 
+        context: str,
+        temperature: float = 0.2,
+        max_tokens: int = 512
+    ) -> str:
     """
     One-click triage report for the Board page.
     """
-    llm = make_llm(model=model, temperature=0.1)
+    llm = make_llm(
+        model=model, 
+        temperature=temperature, 
+        max_tokens=max_tokens,
+    )
 
     system = SystemMessage(content=_base_system_prompt())
+    
     human = HumanMessage(
         content=(
             f"""

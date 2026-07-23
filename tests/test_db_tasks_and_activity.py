@@ -1,8 +1,8 @@
 # tests/test_db_tasks_and_activity.py
 from __future__ import annotations
+import pytest
 
 import core.db as db
-
 
 def test_add_task_defaults(temp_db):
     task_id = db.add_task(
@@ -89,3 +89,39 @@ def test_update_task_title_changes_title(temp_db):
     task = db.get_task(task_id)
     assert task is not None
     assert task.title == "New title"
+
+def test_add_task_rejects_invalid_due_date(temp_db):
+    with pytest.raises(ValueError, match="YYYY-MM-DD"):
+        db.add_task(
+            title="Invalid due date",
+            priority="Medium",
+            due_date="07/22/2026",
+        )
+
+def test_update_task_can_clear_due_date(temp_db):
+    task_id = db.add_task(
+        title="Clear my date",
+        priority="Medium",
+        due_date="2026-07-22",
+    )
+
+    db.update_task(task_id, due_date=None)
+
+    task = db.get_task(task_id)
+
+    assert task is not None
+    assert task.due_date is None
+
+def test_queue_column_uses_text_type(temp_db):
+    with db.get_conn() as conn:
+        columns = conn.execute(
+            "PRAGMA table_info(tasks);"
+        ).fetchall()
+
+    queue_column = next(
+        column
+        for column in columns
+        if column["name"] == "queue"
+    )
+
+    assert queue_column["type"] == "TEXT"

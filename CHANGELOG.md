@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.5.3] - Compatibility and Stability
+### Added
+- Centralized due-date parsing, validation, and sorting
+- Automated GitHub Actions test workflow
+- Tests for due-date behavior, AI configuration, and schema types
+- Configurable Ollama response-token limit
+
+### Improved
+- Default Ollama model updated to `gpt-oss:20b`
+- AI temperature and response-token settings now affect Daily Triage
+- Recent Notes limit now controls the Home dashboard
+- Virtual-environment launch instructions
+- README architecture documentation
+
+### Fixed
+- Invalid due dates could break Home and AI task sorting
+- Existing due dates could not be cleared
+- Queue column was declared as `TEST` instead of `TEXT`
+- Unused tab-navigation state
+- Inactive AI context-height setting
+- Generated coverage data was tracked by Git
+
 ## [0.5.2] - Polishing and Architecture Cleanup
 ### Added
 - Home dashboard activity feed

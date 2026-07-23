@@ -28,3 +28,8 @@ data/*.db
 
 # --- Notes ---
 notes/
+
+# --- Test coverage ---
+.coverage
+coverage.xml
+htmlcov/

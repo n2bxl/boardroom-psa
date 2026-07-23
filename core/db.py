@@ -5,11 +5,13 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
+from core.date_utils import normalize_due_date
 from core.time_utils import utc_now_iso
 
 DB_PATH = Path("data") / "life.db"
+_UNCHANGED = object()  # Sentinel value for unchanged fields in update_task
 
 def get_conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -83,7 +85,7 @@ def ensure_columns() -> None:
 
         if "queue" not in task_existing:
             conn.execute(
-                "ALTER TABLE tasks ADD COLUMN queue TEST NOT NULL DEFAULT 'Personal';"
+                "ALTER TABLE tasks ADD COLUMN queue TEXT NOT NULL DEFAULT 'Personal';"
             )
 
         if "updated_at" not in task_existing:
@@ -224,6 +226,11 @@ def add_task(
     ) -> int:
     now_utc = utc_now_iso()
 
+    normalized_due_date, due_error = normalize_due_date(due_date)
+
+    if due_error:
+        raise ValueError(due_error)
+
     if status != "Waiting":
         waiting_reason = None
 
@@ -236,7 +243,7 @@ def add_task(
             (
                 title.strip(),
                 priority,
-                due_date,
+                normalized_due_date,
                 queue,
                 status,
                 waiting_reason,
@@ -378,7 +385,7 @@ def update_task(
         *, 
         status: Optional[str] = None, 
         priority: Optional[str] = None, 
-        due_date: Optional[str] = None, 
+        due_date: Optional[str] | object = _UNCHANGED,
         queue: Optional[str] = None,
         waiting_reason: Optional[str] = "__UNCHANGED__",
     ) -> None:
@@ -392,9 +399,15 @@ def update_task(
     if priority is not None:
         fields.append("priority = ?")
         params.append(priority)
-    if due_date is not None:
+    if due_date is not _UNCHANGED:
+        due_value = cast(Optional[str], due_date)
+        normalized_due_date, due_error = normalize_due_date(due_value)
+
+        if due_error:
+            raise ValueError(due_error)
+
         fields.append("due_date = ?")
-        params.append(due_date)
+        params.append(normalized_due_date)
     if queue is not None:
         fields.append("queue = ?")
         params.append(queue)

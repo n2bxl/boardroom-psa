@@ -12,7 +12,6 @@ def test_jump_to_task_sets_expected_session_state():
     jump_to_task(42)
 
     assert st.session_state["selected_task_id"] == 42
-    assert st.session_state["active_tab"] == "Board"
     assert "selected_note_id" not in st.session_state
 
 
@@ -22,7 +21,6 @@ def test_jump_to_note_sets_expected_session_state():
     jump_to_note(99)
 
     assert st.session_state["selected_note_id"] == 99
-    assert st.session_state["active_tab"] == "Notes"
     assert "selected_task_id" not in st.session_state
 
 

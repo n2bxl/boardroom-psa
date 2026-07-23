@@ -10,13 +10,12 @@ APP = {
 
 DEFAULTS = { # TODO: complete AI integrations
     # AI
-    "ollama_model": "llama3.2:latest",
+    "ollama_model": "gpt-oss:20b",
     "llm_temperature": 0.2,
     "llm_max_tokens": 512,
     "ai_context_task_limit": 20,
 
     # UI sizes
-    "ai_context_height": 220,
     "task_note_height": 120,
     "note_body_height": 180,
 

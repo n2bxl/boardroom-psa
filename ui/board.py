@@ -9,15 +9,13 @@ from core.ai import daily_triage
 from core.constants import STATUS_ORDER, PRIORITIES, PRIORITY_ICONS, QUEUES, WAITING_REASONS, OPEN_STATUSES
 from core.config import DEFAULTS
 from core.db import list_tasks, update_task, list_task_notes, add_task_note, update_task_title, get_task_time_total
+from core.date_utils import due_date_sort_key, is_due_today, is_overdue, normalize_due_date, today_iso
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 
 from ui.worklogs import render_task_note_entry, render_task_note_history, format_minutes
 
 def _consume_selected_task_id():
     return st.session_state.pop("selected_task_id", None)
-
-def today_iso() -> str:
-    return str(dt.date.today())
 
 def days_since(iso_dt: str | None) -> int | None:
     """
@@ -40,18 +38,9 @@ def days_since(iso_dt: str | None) -> int | None:
     except ValueError:
         return None
 
-def is_overdue(due_date: str | None) -> bool:
-    if not due_date:
-        return False
-    try:
-        return dt.date.fromisoformat(due_date) < dt.date.today()
-    except ValueError:
-        return False
-
-
 def compute_kpis(all_tasks):
     open_like = [t for t in all_tasks if t.status in OPEN_STATUSES]
-    due_today = [t for t in open_like if (t.due_date == today_iso())]
+    due_today = [t for t in open_like if is_due_today(t.due_date)]
     overdue = [t for t in open_like if is_overdue(t.due_date)]
     waiting = [t for t in open_like if t.status == "Waiting"]
     return open_like, due_today, overdue, waiting
@@ -69,7 +58,7 @@ def build_ai_context(get_setting):
             score += 50
 
         # Due today gets high urgency
-        if task.due_date == today_iso():
+        if is_due_today(task.due_date):
             score += 30
 
         # Priority weighting
@@ -99,8 +88,8 @@ def build_ai_context(get_setting):
         all_open,
         key=lambda t: (
             -task_score(t),
-            dt.datetime.fromisoformat(t.due_date) if t.due_date else dt.datetime.max,
-            t.title.lower()
+            due_date_sort_key(t.due_date),
+            t.title.lower(),
         ),
     )
 
@@ -118,7 +107,7 @@ def build_ai_context(get_setting):
 
     for t in scored_tasks[:ai_context_task_limit]:
         overdue_flag = "yes" if is_overdue(t.due_date) else "no"
-        due_today_flag = "yes" if t.due_date == today_iso() else "no"
+        due_today_flag = "yes" if is_due_today(t.due_date) else "no"
         waiting_reason = getattr(t, "waiting_reason", "") if t.status == "Waiting" else ""
         stale_days = days_since(
             getattr(t, "updated_at", None) 
@@ -173,7 +162,9 @@ def render_board(
                 with st.spinner("Running triage..."):
                     report = daily_triage(
                         model=model_name, 
-                        context=build_ai_context(get_setting)
+                        context=build_ai_context(get_setting),
+                        temperature=float(get_setting("llm_temperature")),
+                        max_tokens=int(get_setting("llm_max_tokens")),
                     )
                 # st.markdown("### Triage Report")
                 st.write(report)
@@ -329,17 +320,27 @@ def render_board(
 
     a1, a2, _ = st.columns([1, 1, 2])
     if a1.button("Save Changes", width="stretch"):
-        if new_title.strip() != task.title:
-            update_task_title(task.id, new_title)
+        normalized_due, due_error = normalize_due_date(new_due)
 
-        update_task(
-            task.id,
-            status=new_status,
-            priority=new_priority,
-            due_date=new_due.strip() or None,
-            queue=new_queue,
-            waiting_reason=new_waiting_reason if new_status == "Waiting" else None,
-        )
+        if due_error:
+            st.error(due_error)
+        else:
+            if new_title.strip() != task.title:
+                update_task_title(task.id, new_title.strip())
+
+            update_task(
+                task.id,
+                status=new_status,
+                priority=new_priority,
+                due_date=normalized_due,
+                queue=new_queue,
+                waiting_reason=(
+                    new_waiting_reason
+                    if new_status == "Waiting"
+                    else None
+                ),
+            ),
+            
         st.success("Updated.")
         st.rerun()
 
