@@ -7,9 +7,89 @@ import streamlit as st
 from core.config import DEFAULTS
 from core.version import __version__
 
+STALE_THRESHOLD_DRAFT_KEY = "draft_stale_days_threshold"
+SETTINGS_FEEDBACK_KEY = "settings_feedback"
+
+
+def initialize_stale_threshold_draft(session_state, get_settings):
+    """
+    Initialize the editable value without overwriting unsaved changes.
+    """
+    session_state.setdeafult(
+        STALE_THRESHOLD_DRAFT_KEY,
+        int(get_settings("stale_days_threshold")),
+    )
+
+def apply_stale_threshold_draft(session_state):
+    """
+    Copy the draft threshold into the active application setting.
+    """
+    session_state["stale_days_threshold"] = int(
+        session_state[STALE_THRESHOLD_DRAFT_KEY]
+    )
+
+def reset_settings_state(session_state):
+    """Restore active settings and the stale-threshold draft."""
+    for key, value in DEFAULTS.items():
+        session_state[key] = value
+
+    session_state[STALE_THRESHOLD_DRAFT_KEY] = int(
+        DEFAULTS["stale_days_threshold"]
+    )
+
+def save_stale_threshold():
+    """Streamlit callback for saving the stale threshold."""
+    apply_stale_threshold_draft(st.session_state)
+    st.session_state[SETTINGS_FEEDBACK_KEY] = (
+        "Board settings saved."
+    )
+
+def reset_settings():
+    """Streamlit callback for resetting all settings."""
+    reset_settings_state(st.session_state)
+    st.session_state[SETTINGS_FEEDBACK_KEY] = (
+        "Settings reset to defaults."
+    )
+
+def render_stale_threshold_form(get_setting):
+    """Render the first setting using the explicit Save workflow."""
+    initialize_stale_threshold_draft(
+        st.session_state,
+        get_setting,
+    )
+
+    st.caption(
+        "The stale-task threshold uses the new Save Settings workflow. "
+        "Other settings currently apply immediately."
+    )
+
+    with st.form("stale_threshold_settings_form"):
+        st.slider(
+            "Stale task threshold (days)",
+            min_value=1,
+            max_value=30,
+            step=1,
+            key=STALE_THRESHOLD_DRAFT_KEY,
+            help=(
+                "Open tasks with no activity for this many days are treated as stale."
+            ),
+        )
+
+        st.form_submit_button(
+            "Save Settings",
+            width="stretch",
+            on_click=save_stale_threshold,
+        )
 
 def render_settings_tab(get_setting):
     st.subheader("Settings")
+
+    feedback = st.session_state.pop(
+        SETTINGS_FEEDBACK_KEY,
+        None,
+    )
+    if feedback:
+        st.success(feedback)
 
     st.markdown("### AI")
     st.session_state["ollama_model"] = st.text_input(
@@ -56,6 +136,8 @@ def render_settings_tab(get_setting):
     queue_mode = "ALL" if get_setting("default_queues") == "ALL" else "Personal only"
     selected = st.selectbox("Default queue filter", options=["ALL", "Personal only"], index=0 if queue_mode == "ALL" else 1)
     st.session_state["default_queues"] = "ALL" if selected == "ALL" else ["Personal"]
+
+    render_stale_threshold_form(get_setting)
 
     st.divider()
     st.markdown("### UI")
@@ -150,11 +232,7 @@ def render_settings_tab(get_setting):
     )
 
     st.divider()
-    if st.button("Reset to defaults", width="stretch"):
-        for k, v in DEFAULTS.items():
-            st.session_state[k] = v
-        st.success("Reset.")
-        st.rerun()
+    st.button("Reset to defaults", width="stretch", on_click=reset_settings)
 
     st.divider()
     st.caption(f"Boardroom Personal PSA v{__version__}")

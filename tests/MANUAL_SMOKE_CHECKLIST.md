@@ -42,3 +42,13 @@
 - [ ] No broken selectbox rendering
 - [ ] No missing form submit warnings
 - [ ] No import errors on app startup
+
+## Settings tab
+- [ ] Stale task threshold initially displays 3 days
+- [ ] Moving the slider does not affect the Board before saving
+- [ ] Save Settings displays a success message
+- [ ] The Board uses the saved threshold immediately
+- [ ] An unsaved slider value survives normal reruns
+- [ ] Reset to defaults restores the active threshold to 3 days
+- [ ] Reset to defaults restores the slider to 3 days
+- [ ] Existing immediate-apply settings still work
