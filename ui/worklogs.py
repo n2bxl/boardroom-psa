@@ -79,5 +79,25 @@ def render_task_note_history(existing_notes, display_tz: str, get_setting):
                 st.write(note.body)
     else:
         st.info(
-            "No notes yet. Add the first worklog entry below."
+            "No notes yet. Use the form above to add the first workflow entry."
         )
+
+
+def render_task_notes(
+        task_id: int,
+        existing_notes,
+        display_tz: str,
+        add_task_note,
+        get_setting,
+):
+    render_task_note_entry(
+        task_id,
+        add_task_note,
+        get_setting,
+    )
+
+    render_task_note_history(
+        existing_notes,
+        display_tz,
+        get_setting,
+    )

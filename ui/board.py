@@ -12,7 +12,8 @@ from core.db import list_tasks, update_task, list_task_notes, add_task_note, upd
 from core.date_utils import due_date_sort_key, is_due_today, is_overdue, normalize_due_date, today_iso
 from core.time_utils import resolve_timezone, format_timestamp_for_display
 
-from ui.worklogs import render_task_note_entry, render_task_note_history, format_minutes
+from ui.worklogs import render_task_notes, format_minutes
+
 
 def _consume_selected_task_id():
     return st.session_state.pop("selected_task_id", None)
@@ -315,8 +316,13 @@ def render_board(
     task_notes_limit = int(get_setting("task_notes_limit"))
 
     existing_notes = list_task_notes(task.id, limit=task_notes_limit)
-    render_task_note_history(existing_notes, display_tz, get_setting)
-    render_task_note_entry(task.id, add_task_note, get_setting)
+    render_task_notes(
+        task_id=task.id,
+        existing_notes=existing_notes,
+        display_tz=display_tz,
+        add_task_note=add_task_note,
+        get_setting=get_setting
+    )
 
     a1, a2, _ = st.columns([1, 1, 2])
     if a1.button("Save Changes", width="stretch"):
