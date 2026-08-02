@@ -15,7 +15,7 @@ def initialize_stale_threshold_draft(session_state, get_settings):
     """
     Initialize the editable value without overwriting unsaved changes.
     """
-    session_state.setdeafult(
+    session_state.setdefault(
         STALE_THRESHOLD_DRAFT_KEY,
         int(get_settings("stale_days_threshold")),
     )

@@ -79,7 +79,9 @@ This application follows a modular architecture:
     - ai.py
     - config.py
     - constants.py
+    - date_utils.py
     - db.py
+    - note_service.py
     - time_utils.py
     - version.py
 - ui/
@@ -116,9 +118,19 @@ This keeps the system fast, private, and easy to maintain.
 Create a virtual environment and install dependencies:
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
+
+python3 -m streamlit run app.py
+```
+
+Ollama must be running before using AI Daily Triage. The Ollama
+desktop application may already provide the local service. Otherwise,
+start it separately with:
+
+```bash
 ollama serve
-streamlit run app.py
 ```
