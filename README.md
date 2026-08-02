@@ -10,6 +10,7 @@ The goal is to bring structured "operations thinking" to personal productivity.
 ## Project Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for current priorities, planned features, and future ideas.
+
 ---
 ## Core Concepts
 
