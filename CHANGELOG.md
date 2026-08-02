@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.6.0] - Database Safety Foundation
+
+### Added
+- Read-only SQLite database health-check command
+- SQLite schema version tracking
+- Ordered database migration runner
+- Automatic validated backups before pending migrations
+- Migration fixtures and regression tests
+- Migration-path reporting for outdated databases
+
+### Improved
+- Application startup now validates database compatibility
+- Unversioned databases are safely adopted as schema version 1
+- Database integrity and foreign keys are checked after migrations
+
+### Safety
+- Databases created by newer unsupported Boardroom versions are rejected
+- Failed migrations roll back without advancing the schema version
+- Missing migration paths abort before creating changes
+---
 ## [0.5.3] - Compatibility and Stability
 ### Added
 - Centralized due-date parsing, validation, and sorting
