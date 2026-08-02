@@ -5,43 +5,18 @@ The goal is not to build a massive productivity platform. The goal is to build a
 
 ---
 ## Next Patch
-### Task Details Reliability
-Prevent task navigation and Streamlit reruns from changing the task being edited.
+### Task Notes and Worklog UX
 
-**Observed bug:**
-1. Open a task from Home
-2. Switch to Board when prompted
-3. Enter a task note/worklog and time spent
-4. Select **Add note**
-5. The selected task changes and the entry is not added to the original task
+Allow task history to be corrected and maintained without directly editing the database.
 
-- [ ] Preserve the selected Board task across Streamlit reruns
-- [ ] Keep the transient Home-to-Board navigation request separate from the persistent Board selection
-- [ ] Ensure task notes and worklogs are always submitted to the task whose form was displayed
-- [ ] Allow a new Home navigation request to replace the persistent Board selection
-- [ ] Fall back safely when the selected task is no longer included by the active filters
-- [ ] Add regression tests for opening a task from Home and submitting a worklog after the page reruns
-- [ ] Add a regression test confirming that time spent is saved to the intended task
-
-### Task Detail Action Placement
-Reduce scrolling when editing or completing tasks.
-
-- [ ] Move **Save Changes** above the Task Notes section
-- [ ] Move **Mark Done** above the Task Notes section
-- [ ] Keep **Save Changes** visually prominent without making **Mark Done** easy to trigger accidentally
-- [ ] Confirm saving and completing a task still operate on the selected task
-- [ ] Add or update tests for task action placement and behavior
-
-### Settings Reliability
-Continue migrating settings to an explicit Save workflow one setting at a time.
-
-- [x] Decide that settings should use an explicit **Save Settings** button
-- [x] Begin the Save Settings migration with the stale-task threshold
-- [ ] Investigate remaining settings that appear to require an extra Streamlit rerun before taking effect
-- [ ] Provide consistent success feedback after saving each settings section
-- [ ] Preserve unsaved draft values across normal reruns
-- [ ] Migrate remaining settings section by section rather than all at once
-- [ ] Consider whether selected settings should persist between app sessions instead of living only in `st.session_state`
+- [ ] Add edit actions for task notes
+- [ ] Add delete actions for task notes
+- [ ] Require confirmation before deleting a task note
+- [ ] Preserve the selected task after editing or deleting an entry
+- [ ] Ensure edited time entries update the task’s total logged time
+- [ ] Ensure deleting time entries updates the task’s total logged time
+- [ ] Update task activity timestamps after worklog changes
+- [ ] Add database, service, and UI-focused regression tests
 
 ---
 ## Next Major Feature
@@ -264,6 +239,22 @@ Consider a 30-60-90-day pattern view.
 
 ---
 ## Completed Infrastructure and Features
+### Board and Settings Reliability
+
+- [x] Preserve the selected Board task across Streamlit reruns
+- [x] Separate transient Home navigation from persistent Board selection
+- [x] Ensure task notes and time entries are submitted to the displayed task
+- [x] Fall back safely when a selected task is excluded by active filters
+- [x] Add regression coverage for Board selection behavior
+- [x] Move **Save Changes** and **Mark Done** above Task Notes
+- [x] Replace mixed live settings with one explicit Settings form
+- [x] Preserve unsaved setting drafts across normal reruns
+- [x] Apply all setting changes through one **Save Settings** action
+- [x] Add a unified **Reset to Defaults** action
+- [x] Persist validated settings between application sessions
+- [x] Ignore malformed, unknown, and invalid saved setting values
+- [x] Save settings atomically and exclude local settings from Git
+
 ### Database Compatibility and Migrations
 - [x] Add a read-only SQLite database health check
 - [x] Track the current SQLite schema version

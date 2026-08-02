@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import streamlit as st
 
 from core.config import APP, DEFAULTS
 from core.constants import STATUS_ORDER, OPEN_STATUSES, QUEUES
 from core.db import init_db
+from core.settings_store import load_settings
 
 from ui.board import render_board
 from ui.home import render_home
@@ -19,8 +21,18 @@ def get_setting(key: str):
     return st.session_state.get(key, DEFAULTS[key])
 
 def init_settings():
-    for k, v in DEFAULTS.items():
-        st.session_state.setdefault(k, v)
+    """
+    Initialize the current Streamlit session from saved settings.
+
+    setdefault preserves settings already active in the current session.
+    """
+    saved_settings = load_settings()
+
+    for key, value in saved_settings.items():
+        st.session_state.setdefault(
+            key, 
+            deepcopy(value)
+        )
 
 def get_default_queues():
     v = get_setting("default_queues")
@@ -37,6 +49,7 @@ def get_default_statuses():
 def init_navigation_state():
     st.session_state.setdefault("selected_task_id", None)
     st.session_state.setdefault("selected_note_id", None)
+    st.session_state.setdefault("board_selected_task_id", None)
 
 # --- Tabs ---
 def render_tabs():

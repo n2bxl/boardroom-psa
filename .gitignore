@@ -22,6 +22,7 @@ env/
 
 # --- Local data (SQLite, backups, etc.) ---
 data/*.db
+data/settings.json
 
 # --- Logs ---
 *.log

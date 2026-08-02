@@ -14,6 +14,25 @@ from core.time_utils import resolve_timezone, format_timestamp_for_display
 
 from ui.worklogs import render_task_notes, format_minutes
 
+BOARD_SELECTED_TASK_KEY = "board_selected_task_id"
+
+def _sync_board_selection(
+        task_options: list[int],
+        jump_task_id: int | None,
+) -> int:
+    """
+    Keep the Board's selected task stable across Streamlit reruns.
+
+    A task opened from Home takes priority. Otherwise, preserve the
+    current Board selection if it is still availalbe in the filtered list.
+    """
+
+    if jump_task_id in task_options:
+        st.session_state[BOARD_SELECTED_TASK_KEY] = jump_task_id
+    elif st.session_state.get(BOARD_SELECTED_TASK_KEY) not in task_options:
+        st.session_state[BOARD_SELECTED_TASK_KEY] = task_options[0]
+
+    return st.session_state[BOARD_SELECTED_TASK_KEY]
 
 def _consume_selected_task_id():
     return st.session_state.pop("selected_task_id", None)
@@ -253,22 +272,14 @@ def render_board(
     id_to_label = {t.id: f"#{t.id} | {t.title}" for t in filtered}
     task_options = list(id_to_label.keys())
 
-    preselected_task_id = selected_task_id
-
-    default_index = 0
-    if preselected_task_id in task_options:
-        default_index = task_options.index(preselected_task_id)
+    _sync_board_selection(task_options, selected_task_id)
 
     selected_id = st.selectbox(
         "Select task",
         options=task_options,
         format_func=lambda i: id_to_label[i],
-        index=default_index,
+        key=BOARD_SELECTED_TASK_KEY,
     )
-
-    # Clear the jump target after it has been used once
-    if preselected_task_id == selected_id:
-        st.session_state["selected_task_id"] = None
 
     task = next(t for t in all_tasks if t.id == selected_id)
 
@@ -307,24 +318,13 @@ def render_board(
         new_waiting_reason = None
 
     d1, _ = st.columns([1, 2])
-    new_due = d1.text_input("Due (YYYY-MM-DD or blank).", value=task.due_date or "")
-
-    st.markdown("### Task Notes")
-    total_minutes = get_task_time_total(task.id)
-    st.caption(f"Total time logged: {format_minutes(total_minutes)}")
-
-    task_notes_limit = int(get_setting("task_notes_limit"))
-
-    existing_notes = list_task_notes(task.id, limit=task_notes_limit)
-    render_task_notes(
-        task_id=task.id,
-        existing_notes=existing_notes,
-        display_tz=display_tz,
-        add_task_note=add_task_note,
-        get_setting=get_setting
+    new_due = d1.text_input(
+        "Due (YYYY-MM-DD or blank).",
+        value=task.due_date or "",
     )
 
     a1, a2, _ = st.columns([1, 1, 2])
+
     if a1.button("Save Changes", width="stretch"):
         normalized_due, due_error = normalize_due_date(new_due)
 
@@ -345,12 +345,27 @@ def render_board(
                     if new_status == "Waiting"
                     else None
                 ),
-            ),
-            
-        st.success("Updated.")
-        st.rerun()
+            )
+
+            st.success("Updated.")
+            st.rerun()
 
     if a2.button("Mark Done", width="stretch"):
         update_task(task.id, status="Done")
         st.success("Closed.")
         st.rerun()
+
+    st.markdown("### Task Notes")
+    total_minutes = get_task_time_total(task.id)
+    st.caption(f"Total time logged: {format_minutes(total_minutes)}")
+
+    task_notes_limit = int(get_setting("task_notes_limit"))
+
+    existing_notes = list_task_notes(task.id, limit=task_notes_limit)
+    render_task_notes(
+        task_id=task.id,
+        existing_notes=existing_notes,
+        display_tz=display_tz,
+        add_task_note=add_task_note,
+        get_setting=get_setting
+    )

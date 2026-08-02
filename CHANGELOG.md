@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.6.1] - Board Reliability and Persistent Settings
+
+### Added
+
+* Local JSON persistence for application settings
+* Validation and default fallback for saved setting values
+* Atomic settings-file replacement to avoid partial writes
+* Regression tests for persistent Board task selection
+* Tests for settings drafts, validation, saving, loading, and reset behavior
+
+### Improved
+
+* Reworked Settings into one unified form with a single **Save Settings** action
+* Added a clear **Reset to Defaults** action
+* Settings changes remain drafts until explicitly saved
+* Saved settings now survive Streamlit restarts
+* Moved **Save Changes** and **Mark Done** above the Task Notes section
+* Kept local settings data outside version control
+
+### Fixed
+
+* Adding a task note after navigating from Home could switch the Board to a different task
+* Worklog text and time could be submitted against the wrong selected task
+* Board task selection could reset during Streamlit reruns
+* Settings could require an additional rerun before appearing to take effect
+
+---
 ## [0.6.0] - Database Safety Foundation
 
 ### Added
