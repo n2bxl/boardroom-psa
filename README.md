@@ -7,6 +7,10 @@ It combines task management, worklogs, notes, and AI-assisted triage into a sing
 The goal is to bring structured "operations thinking" to personal productivity.
 
 ---
+## Project Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for current priorities, planned features, and future ideas.
+---
 ## Core Concepts
 
 Boardroom treats personal work the same way a help desk treats tickets.
