@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 
+import core.db as db
+
 from core.db_health import (
     REQUIRED_SCHEMA,
     HealthCheckResult,
@@ -63,14 +65,16 @@ def test_healthy_database_passes_required_checks(
         == "PASS"
     )
 
-    assert (
-        _result_for(
-            results,
-            "Schema version",
-        ).details
-        == "0 (unversioned)"
+    version_result = _result_for(
+        results,
+        "Schema version",
     )
 
+    assert version_result.status == "PASS"
+    assert (
+        version_result.details
+        == "1 (supported)"
+    )
 
 def test_missing_required_table_fails_health_check(
     tmp_path,
@@ -216,3 +220,53 @@ def test_main_returns_expected_exit_codes(
 
     # Read-only mode must not create a missing database.
     assert not missing_path.exists()
+
+def test_unversioned_database_is_reported_as_info(
+    temp_db,
+):
+    with sqlite3.connect(temp_db) as connection:
+        connection.execute(
+            "PRAGMA user_version = 0;"
+        )
+
+    results = check_database(temp_db)
+
+    version_result = _result_for(
+        results,
+        "Schema version",
+    )
+
+    assert is_healthy(results)
+    assert version_result.status == "INFO"
+    assert "unversioned" in version_result.details
+    assert (
+        str(db.CURRENT_SCHEMA_VERSION)
+        in version_result.details
+    )
+
+def test_newer_database_version_fails_health_check(
+    temp_db,
+):
+    newer_version = (
+        db.CURRENT_SCHEMA_VERSION + 1
+    )
+
+    with sqlite3.connect(temp_db) as connection:
+        connection.execute(
+            f"PRAGMA user_version = "
+            f"{newer_version};"
+        )
+
+    results = check_database(temp_db)
+
+    version_result = _result_for(
+        results,
+        "Schema version",
+    )
+
+    assert not is_healthy(results)
+    assert version_result.status == "FAIL"
+    assert "newer" in version_result.details
+    assert str(newer_version) in (
+        version_result.details
+    )

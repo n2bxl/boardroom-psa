@@ -13,41 +13,7 @@ from core import db
 
 CheckStatus = Literal["PASS", "FAIL", "INFO"]
 
-REQUIRED_SCHEMA: dict[str, frozenset[str]] = {
-    "tasks": frozenset(
-        {
-            "id",
-            "title",
-            "priority",
-            "due_date",
-            "status",
-            "created_at",
-            "updated_at",
-            "queue",
-            "waiting_reason",
-        }
-    ),
-    "notes": frozenset(
-        {
-            "id",
-            "title",
-            "body",
-            "tags",
-            "created_at",
-            "updated_at",
-            "task_id",
-        }
-    ),
-    "task_notes": frozenset(
-        {
-            "id",
-            "task_id",
-            "body",
-            "created_at",
-            "time_spent_minutes",
-        }
-    ),
-}
+REQUIRED_SCHEMA = db.REQUIRED_SCHEMA
 
 
 @dataclass(frozen=True)
@@ -287,20 +253,49 @@ def check_database(
             "PRAGMA user_version;"
         ).fetchone()
 
-        schema_version = (
-            int(version_row[0])
-            if version_row
-            else 0
+        schema_version = db.get_schema_version(
+            connection
         )
 
-        version_details = str(schema_version)
-
         if schema_version == 0:
-            version_details += " (unversioned)"
+            version_status: CheckStatus = "INFO"
+            version_details = (
+                "0 (unversioned; startup will adopt "
+                f"version {db.CURRENT_SCHEMA_VERSION})"
+            )
+
+        elif (
+            schema_version
+            == db.CURRENT_SCHEMA_VERSION
+        ):
+            version_status = "PASS"
+            version_details = (
+                f"{schema_version} (supported)"
+            )
+
+        elif (
+            schema_version
+            > db.CURRENT_SCHEMA_VERSION
+        ):
+            version_status = "FAIL"
+            version_details = (
+                f"{schema_version} "
+                f"(newer than supported version "
+                f"{db.CURRENT_SCHEMA_VERSION})"
+            )
+
+        else:
+            version_status = "FAIL"
+            version_details = (
+                f"{schema_version} "
+                f"(older than current version "
+                f"{db.CURRENT_SCHEMA_VERSION}; "
+                f"migration required)"
+            )
 
         results.append(
             HealthCheckResult(
-                status="INFO",
+                status=version_status,
                 name="Schema version",
                 details=version_details,
             )
