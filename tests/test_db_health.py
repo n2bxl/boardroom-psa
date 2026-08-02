@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 import core.db as db
+import core.db_health as db_health
 
 from core.db_health import (
     REQUIRED_SCHEMA,
@@ -269,4 +270,72 @@ def test_newer_database_version_fails_health_check(
     assert "newer" in version_result.details
     assert str(newer_version) in (
         version_result.details
+    )
+
+def test_outdated_database_with_complete_path_is_info(
+    temp_db,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        db,
+        "CURRENT_SCHEMA_VERSION",
+        3,
+    )
+
+    monkeypatch.setattr(
+        db_health,
+        "MIGRATIONS",
+        {
+            2: lambda connection: None,
+            3: lambda connection: None,
+        },
+    )
+
+    results = check_database(temp_db)
+
+    version_result = _result_for(
+        results,
+        "Schema version",
+    )
+
+    assert is_healthy(results)
+    assert version_result.status == "INFO"
+    assert (
+        "migration available"
+        in version_result.details
+    )
+    assert "version 3" in (
+        version_result.details
+    )
+
+def test_outdated_database_with_missing_path_fails(
+    temp_db,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        db,
+        "CURRENT_SCHEMA_VERSION",
+        3,
+    )
+
+    monkeypatch.setattr(
+        db_health,
+        "MIGRATIONS",
+        {
+            2: lambda connection: None,
+        },
+    )
+
+    results = check_database(temp_db)
+
+    version_result = _result_for(
+        results,
+        "Schema version",
+    )
+
+    assert not is_healthy(results)
+    assert version_result.status == "FAIL"
+    assert (
+        "missing version(s): 3"
+        in version_result.details
     )

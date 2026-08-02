@@ -8,10 +8,17 @@ from pathlib import Path
 from typing import Optional, cast
 
 from core.date_utils import normalize_due_date
+from core.migrations import (
+    MIGRATIONS,
+    get_schema_version,
+    run_pending_migrations,
+    set_schema_version,
+)
 from core.time_utils import utc_now_iso
 
 DB_PATH = Path("data") / "life.db"
 
+BASELINE_SCHEMA_VERSION = 1
 CURRENT_SCHEMA_VERSION = 1
 
 REQUIRED_SCHEMA: dict[str, frozenset[str]] = {
@@ -69,53 +76,24 @@ def get_conn() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
-def get_schema_version(
-    connection: sqlite3.Connection,
-) -> int:
-    row = connection.execute(
-        "PRAGMA user_version;"
-    ).fetchone()
-
-    return int(row[0]) if row else 0
-
-
-def set_schema_version(
-    connection: sqlite3.Connection,
+def validate_supported_schema_version(
     version: int,
 ) -> None:
     version = int(version)
 
     if version < 0:
-        raise ValueError(
-            "Schema version cannot be negative."
+        raise UnsupportedDatabaseVersionError(
+            "Database schema version cannot "
+            "be negative."
         )
 
-    connection.execute(
-        f"PRAGMA user_version = {version};"
-    )
-
-
-def validate_supported_schema_version(
-    version: int,
-) -> None:
     if version > CURRENT_SCHEMA_VERSION:
         raise UnsupportedDatabaseVersionError(
-            f"Database schema version {version} is newer "
-            f"than this Boardroom build supports "
+            f"Database schema version {version} "
+            "is newer than this Boardroom build "
+            f"supports "
             f"({CURRENT_SCHEMA_VERSION})."
         )
-
-    if version not in (
-        0,
-        CURRENT_SCHEMA_VERSION,
-    ):
-        raise UnsupportedDatabaseVersionError(
-            f"Database schema version {version} is older "
-            f"than the current version "
-            f"({CURRENT_SCHEMA_VERSION}), and no migration "
-            f"path is available."
-        )
-
 
 def get_schema_issues(
     connection: sqlite3.Connection,
@@ -173,22 +151,22 @@ def get_schema_issues(
 
     return issues
 
-def init_db() -> None:
+def _initialize_baseline_schema() -> None:
+    """
+    Create or normalize an unversioned database
+    to Boardroom's version-1 baseline.
+    """
     with get_conn() as conn:
-        schema_version = get_schema_version(conn)
-
-        validate_supported_schema_version(
-            schema_version
-        )
-
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
-                priority TEXT NOT NULL DEFAULT 'Medium',
+                priority TEXT NOT NULL
+                    DEFAULT 'Medium',
                 due_date TEXT,
-                status TEXT NOT NULL DEFAULT 'New',
+                status TEXT NOT NULL
+                    DEFAULT 'New',
                 created_at TEXT NOT NULL,
                 updated_at TEXT
             );
@@ -209,7 +187,8 @@ def init_db() -> None:
 
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS task_notes (
+            CREATE TABLE IF NOT EXISTS
+                task_notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id INTEGER NOT NULL,
                 body TEXT NOT NULL,
@@ -240,19 +219,58 @@ def init_db() -> None:
     ensure_columns()
 
     with get_conn() as conn:
-        schema_issues = get_schema_issues(conn)
+        schema_issues = get_schema_issues(
+            conn
+        )
+
+        if schema_issues:
+            raise DatabaseSchemaError(
+                "Unversioned database does not "
+                "match Boardroom's baseline schema: "
+                + "; ".join(schema_issues)
+            )
+
+        set_schema_version(
+            conn,
+            BASELINE_SCHEMA_VERSION,
+        )
+
+
+def init_db() -> None:
+    with get_conn() as conn:
+        schema_version = get_schema_version(
+            conn
+        )
+
+        validate_supported_schema_version(
+            schema_version
+        )
+
+    if schema_version == 0:
+        _initialize_baseline_schema()
+
+    with get_conn() as conn:
+        run_pending_migrations(
+            connection=conn,
+            database_path=DB_PATH,
+            target_version=(
+                CURRENT_SCHEMA_VERSION
+            ),
+            migrations=MIGRATIONS,
+            backup_dir=(
+                DB_PATH.parent / "backups"
+            ),
+        )
+
+        schema_issues = get_schema_issues(
+            conn
+        )
 
         if schema_issues:
             raise DatabaseSchemaError(
                 "Database schema does not match "
                 "Boardroom's expected schema: "
                 + "; ".join(schema_issues)
-            )
-
-        if get_schema_version(conn) == 0:
-            set_schema_version(
-                conn,
-                CURRENT_SCHEMA_VERSION,
             )
 
 def ensure_columns() -> None:

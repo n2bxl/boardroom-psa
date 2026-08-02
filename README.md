@@ -113,6 +113,17 @@ Boardroom is intentionally simple and local-first.
 This keeps the system fast, private, and easy to maintain.
 
 ---
+## Database Health and Migrations
+
+Boardroom tracks its SQLite schema using
+`PRAGMA user_version`.
+
+Run the read-only database health check with:
+
+```bash
+python -m core.db_health
+```
+---
 ## Running the Application
 
 Create a virtual environment and install dependencies:

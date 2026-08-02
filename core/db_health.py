@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Literal, Sequence
 
 from core import db
+from core.migrations import (
+    MIGRATIONS,
+    get_missing_migration_versions,
+)
 
 
 CheckStatus = Literal["PASS", "FAIL", "INFO"]
@@ -249,20 +253,30 @@ def check_database(
                 )
             )
 
-        version_row = connection.execute(
-            "PRAGMA user_version;"
-        ).fetchone()
-
         schema_version = db.get_schema_version(
             connection
         )
 
         if schema_version == 0:
             version_status: CheckStatus = "INFO"
-            version_details = (
-                "0 (unversioned; startup will adopt "
-                f"version {db.CURRENT_SCHEMA_VERSION})"
-            )
+
+            if (
+                db.BASELINE_SCHEMA_VERSION
+                == db.CURRENT_SCHEMA_VERSION
+            ):
+                version_details = (
+                    "0 (unversioned; startup will "
+                    f"adopt version "
+                    f"{db.BASELINE_SCHEMA_VERSION})"
+                )
+            else:
+                version_details = (
+                    "0 (unversioned; startup will "
+                    f"adopt baseline version "
+                    f"{db.BASELINE_SCHEMA_VERSION} "
+                    f"and migrate to version "
+                    f"{db.CURRENT_SCHEMA_VERSION})"
+                )
 
         elif (
             schema_version
@@ -285,13 +299,36 @@ def check_database(
             )
 
         else:
-            version_status = "FAIL"
-            version_details = (
-                f"{schema_version} "
-                f"(older than current version "
-                f"{db.CURRENT_SCHEMA_VERSION}; "
-                f"migration required)"
+            missing_versions = (
+                get_missing_migration_versions(
+                    schema_version,
+                    db.CURRENT_SCHEMA_VERSION,
+                    MIGRATIONS,
+                )
             )
+
+            if missing_versions:
+                version_status = "FAIL"
+
+                formatted = ", ".join(
+                    str(version)
+                    for version
+                    in missing_versions
+                )
+
+                version_details = (
+                    f"{schema_version} "
+                    f"(migration path is missing "
+                    f"version(s): {formatted})"
+                )
+            else:
+                version_status = "INFO"
+                version_details = (
+                    f"{schema_version} "
+                    f"(migration available to "
+                    f"version "
+                    f"{db.CURRENT_SCHEMA_VERSION})"
+                )
 
         results.append(
             HealthCheckResult(
