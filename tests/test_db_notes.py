@@ -163,3 +163,53 @@ def test_list_recent_notes_returns_most_recent_first(temp_db):
     assert len(notes) == 2
     assert notes[0].title == "Third"
     assert notes[1].title == "Second"
+
+def test_update_task_note_changes_body(temp_db):
+    task_id = db.add_task(
+        title="Editable task",
+        priority="Medium",
+        due_date=None,
+    )
+
+    db.add_task_note(
+        task_id,
+        "Original worklog",
+        time_spent_minutes=30,
+    )
+
+    note = db.list_task_notes(task_id)[0]
+
+    db.update_task_note(
+        note.id,
+        "Updated worklog",
+    )
+
+    updated = db.list_task_notes(task_id)[0]
+
+    assert updated.body == "Updated worklog"
+    assert updated.time_spent_minutes == 30
+    assert updated.created_at == note.created_at
+
+def test_update_task_note_rejects_empty_body(temp_db):
+    task_id = db.add_task(
+        title="Editable task",
+        priority="Medium",
+        due_date=None,
+    )
+
+    db.add_task_note(
+        task_id,
+        "Original worklog",
+    )
+
+    note = db.list_task_notes(task_id)[0]
+
+    try:
+        db.update_task_note(note.id, "   ")
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Task note cannot be empty."
+
+    unchanged = db.list_task_notes(task_id)[0]
+
+    assert unchanged.body == "Original worklog"

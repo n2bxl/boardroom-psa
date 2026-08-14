@@ -57,29 +57,136 @@ def render_task_note_entry(
                 st.success("Note added.")
                 st.rerun()
 
-def render_task_note_history(existing_notes, display_tz: str, get_setting):
+
+def render_task_note_history(
+    existing_notes,
+    display_tz: str,
+    get_setting,
+    update_task_note,
+):
     preview_limit = int(get_setting("note_preview_length"))
+    edit_state_key = "editing_task_note_id"
+
+    if edit_state_key not in st.session_state:
+        st.session_state[edit_state_key] = None
+
+    # If the user switched tasks while editing a note,
+    # clear the stale edit state.
+    visible_note_ids = {note.id for note in existing_notes}
+    if (
+        st.session_state[edit_state_key] is not None
+        and st.session_state[edit_state_key] not in visible_note_ids
+    ):
+        st.session_state[edit_state_key] = None
 
     if existing_notes:
         for note in existing_notes:
             timestamp = format_timestamp_for_display(
                 note.created_at,
-                display_tz
+                display_tz,
             )
-            time_spent = getattr(note, "time_spent_minutes", None)
-            preview = preview_text(note.body, preview_limit)
+
+            time_spent = getattr(
+                note,
+                "time_spent_minutes",
+                None,
+            )
+
+            preview = preview_text(
+                note.body,
+                preview_limit,
+            )
 
             label = timestamp
+
             if time_spent:
-                label = f"{timestamp} — {format_minutes(time_spent)}"
+                label = (
+                    f"{timestamp} — "
+                    f"{format_minutes(time_spent)}"
+                )
 
             label = f"{label} — {preview}"
 
-            with st.expander(label, expanded=False):
-                st.write(note.body)
+            is_editing = (
+                st.session_state[edit_state_key]
+                == note.id
+            )
+
+            with st.expander(
+                label,
+                expanded=is_editing,
+            ):
+                if is_editing:
+                    with st.form(
+                        f"edit_task_note_{note.id}"
+                    ):
+                        edited_body = st.text_area(
+                            "Edit note",
+                            value=note.body,
+                            height=int(
+                                get_setting(
+                                    "task_note_height"
+                                )
+                            ),
+                        )
+
+                        save_col, cancel_col = st.columns(2)
+
+                        with save_col:
+                            save_edit = (
+                                st.form_submit_button(
+                                    "Save note",
+                                    type="primary",
+                                )
+                            )
+
+                        with cancel_col:
+                            cancel_edit = (
+                                st.form_submit_button(
+                                    "Cancel"
+                                )
+                            )
+
+                    if cancel_edit:
+                        st.session_state[
+                            edit_state_key
+                        ] = None
+                        st.rerun()
+
+                    if save_edit:
+                        if not edited_body.strip():
+                            st.warning(
+                                "Note cannot be empty."
+                            )
+                        else:
+                            update_task_note(
+                                note.id,
+                                edited_body,
+                            )
+
+                            st.session_state[
+                                edit_state_key
+                            ] = None
+
+                            st.rerun()
+
+                else:
+                    st.markdown(note.body)
+
+                    if st.button(
+                        "Edit",
+                        key=f"edit_task_note_button_{note.id}",
+                    ):
+                        st.session_state[
+                            edit_state_key
+                        ] = note.id
+
+                        st.rerun()
+
     else:
         st.info(
-            "No notes yet. Use the form above to add the first workflow entry."
+            "No notes yet. Use the form above "
+            "to add the first workflow entry."
         )
 
 
@@ -88,6 +195,7 @@ def render_task_notes(
         existing_notes,
         display_tz: str,
         add_task_note,
+        update_task_note,
         get_setting,
 ):
     render_task_note_entry(
@@ -100,4 +208,5 @@ def render_task_notes(
         existing_notes,
         display_tz,
         get_setting,
+        update_task_note,
     )

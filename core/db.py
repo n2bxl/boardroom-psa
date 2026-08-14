@@ -57,6 +57,7 @@ REQUIRED_SCHEMA: dict[str, frozenset[str]] = {
     ),
 }
 
+
 class UnsupportedDatabaseVersionError(RuntimeError):
     """Raised when Boardroom cannot safely open a database version."""
 
@@ -64,7 +65,9 @@ class UnsupportedDatabaseVersionError(RuntimeError):
 class DatabaseSchemaError(RuntimeError):
     """Raised when the database does not match the expected schema."""
 
+
 _UNCHANGED = object()  # Sentinel value for unchanged fields in update_task
+
 
 def get_conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -74,7 +77,9 @@ def get_conn() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON;")
 
     conn.row_factory = sqlite3.Row
+
     return conn
+
 
 def validate_supported_schema_version(
     version: int,
@@ -94,6 +99,7 @@ def validate_supported_schema_version(
             f"supports "
             f"({CURRENT_SCHEMA_VERSION})."
         )
+
 
 def get_schema_issues(
     connection: sqlite3.Connection,
@@ -150,6 +156,7 @@ def get_schema_issues(
             )
 
     return issues
+
 
 def _initialize_baseline_schema() -> None:
     """
@@ -273,6 +280,7 @@ def init_db() -> None:
                 + "; ".join(schema_issues)
             )
 
+
 def ensure_columns() -> None:
     """Add new columns safely if the DB already exists."""
     with get_conn() as conn:
@@ -320,6 +328,7 @@ def ensure_columns() -> None:
                 "ALTER TABLE notes ADD COLUMN task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL;"
             )
 
+
 def get_task(task_id: int) -> Optional[Task]:
     with get_conn() as conn:
         row = conn.execute(
@@ -335,6 +344,7 @@ def get_task(task_id: int) -> Optional[Task]:
         return None
 
     return Task(**dict(row))
+
     
 def get_task_time_total(task_id: int) -> int:
     with get_conn() as conn:
@@ -352,6 +362,7 @@ def get_task_time_total(task_id: int) -> int:
         if row and row["total"] is not None
         else 0
     )
+
 
 def list_recent_task_activity(limit: int = 8) -> list[RecentTaskActivity]:
     with get_conn() as conn:
@@ -452,6 +463,7 @@ def add_task(
         )
         return int(cur.lastrowid)
 
+
 def list_tasks(status: Optional[str] = None) -> list[Task]:
     q = "SELECT * FROM tasks"
     params: tuple = ()
@@ -463,6 +475,7 @@ def list_tasks(status: Optional[str] = None) -> list[Task]:
     with get_conn() as conn:
         rows = conn.execute(q, params).fetchall()
     return [Task(**dict(r)) for r in rows]
+
 
 def add_note(
     title: str,
@@ -489,6 +502,7 @@ def add_note(
             ),
         )
 
+
 def list_notes(limit: int = 50) -> list[Note]:
     with get_conn() as conn:
         rows = conn.execute(
@@ -501,6 +515,7 @@ def list_notes(limit: int = 50) -> list[Note]:
             (limit, ),
         ).fetchall()
     return [Note(**dict(r)) for r in rows]
+
 
 def get_note(note_id: int) -> Optional[Note]:
     with get_conn() as conn:
@@ -517,6 +532,7 @@ def get_note(note_id: int) -> Optional[Note]:
         return None
 
     return Note(**dict(row))
+
 
 def update_note(
     note_id: int,
@@ -545,6 +561,7 @@ def update_note(
             ),
         )
 
+
 def delete_note(note_id: int) -> None:
     with get_conn() as conn:
         conn.execute(
@@ -554,6 +571,7 @@ def delete_note(note_id: int) -> None:
             """,
             (note_id,),
         )
+
 
 def search_notes(query: str, limit: int = 50) -> list[Note]:
     search_term = f"%{query.strip()}%"
@@ -578,6 +596,7 @@ def search_notes(query: str, limit: int = 50) -> list[Note]:
         ).fetchall()
 
     return [Note(**dict(r)) for r in rows]
+
 
 def update_task(
         task_id: int, 
@@ -623,6 +642,7 @@ def update_task(
     with get_conn() as conn:
         conn.execute(q, params)
 
+
 def add_task_note(
         task_id: int, 
         body: str, 
@@ -649,6 +669,51 @@ def add_task_note(
         )
 
 
+def update_task_note(
+    note_id: int,
+    body: str,
+) -> None:
+    clean_body = body.strip()
+
+    if not clean_body:
+        raise ValueError("Task note cannot be empty.")
+
+    now_utc = utc_now_iso()
+
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT task_id
+            FROM task_notes
+            WHERE id = ?
+            """,
+            (note_id,),
+        ).fetchone()
+
+        if row is None:
+            raise ValueError("Task note not found.")
+
+        task_id = int(row["task_id"])
+
+        conn.execute(
+            """
+            UPDATE task_notes
+            SET body = ?
+            WHERE id = ?
+            """,
+            (clean_body, note_id),
+        )
+
+        conn.execute(
+            """
+            UPDATE tasks
+            SET updated_at = ?
+            WHERE id = ?
+            """,
+            (now_utc, task_id),
+        )
+
+
 def list_task_notes(task_id: int, limit: int = 50) -> list[TaskNote]:
     with get_conn() as conn:
         rows = conn.execute(
@@ -663,6 +728,7 @@ def list_task_notes(task_id: int, limit: int = 50) -> list[TaskNote]:
         ).fetchall()
     return [TaskNote(**dict(r)) for r in rows]
 
+
 def list_recent_notes(limit: int = 5) -> list[Note]:
     with get_conn() as conn:
         rows = conn.execute(
@@ -676,6 +742,7 @@ def list_recent_notes(limit: int = 5) -> list[Note]:
         ).fetchall()
 
     return [Note(**dict(r)) for r in rows]
+
 
 def update_task_title(task_id: int, title: str) -> None:
     clean_title = title.strip()

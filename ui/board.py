@@ -6,11 +6,35 @@ import pandas as pd
 import streamlit as st
 
 from core.ai import daily_triage
-from core.constants import STATUS_ORDER, PRIORITIES, PRIORITY_ICONS, QUEUES, WAITING_REASONS, OPEN_STATUSES
+from core.constants import (
+    STATUS_ORDER, 
+    PRIORITIES, 
+    PRIORITY_ICONS, 
+    QUEUES, 
+    WAITING_REASONS, 
+    OPEN_STATUSES
+)
 from core.config import DEFAULTS
-from core.db import list_tasks, update_task, list_task_notes, add_task_note, update_task_title, get_task_time_total
-from core.date_utils import due_date_sort_key, is_due_today, is_overdue, normalize_due_date, today_iso
-from core.time_utils import resolve_timezone, format_timestamp_for_display
+from core.db import (
+    list_tasks,
+    update_task,
+    list_task_notes,
+    add_task_note,
+    update_task_note,
+    update_task_title,
+    get_task_time_total,
+)
+from core.date_utils import (
+    due_date_sort_key, 
+    is_due_today, 
+    is_overdue, 
+    normalize_due_date, 
+    today_iso
+)
+from core.time_utils import (
+    resolve_timezone, 
+    format_timestamp_for_display
+)
 
 from ui.worklogs import render_task_notes, format_minutes
 
@@ -367,5 +391,6 @@ def render_board(
         existing_notes=existing_notes,
         display_tz=display_tz,
         add_task_note=add_task_note,
+        update_task_note=update_task_note,
         get_setting=get_setting
     )

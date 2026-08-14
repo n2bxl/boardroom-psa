@@ -24,6 +24,7 @@ def test_render_task_notes_places_entry_before_history(monkeypatch):
         existing_notes=[],
         display_tz="America/Chicago",
         add_task_note=lambda *args, **kwargs: None,
+        update_task_note=lambda *args, **kwargs: None,
         get_setting=lambda key: None,
     )
 
