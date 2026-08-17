@@ -55,7 +55,18 @@ Historical task notes should primarily behave as records to read. Editing or del
 * [x] Add regression coverage for task-note editing
 * [x] Preserve the selected task after worklog edits and deletions
 * [ ] Allow logged time on an existing worklog entry to be corrected
+* [ ] Reuse the existing Task Note / Worklog time-entry UI when editing logged time rather than introducing a separate editing control
+* [ ] Pre-populate the edit-time control with the entry's currently logged time
+* [ ] Preserve user-configured time-entry increments and related Settings behavior when editing existing worklogs
+* [ ] Allow note text and logged time to be changed independently or together through the existing **Save note** action
+* [ ] Allow logged time to be reduced to zero where appropriate
 * [ ] Ensure edited time entries immediately update task time totals
+* [ ] Update parent task activity timestamps after logged-time corrections
+* [ ] Add database regression coverage for increasing, decreasing, clearing, and preserving logged time
+* [ ] Add Streamlit AppTest coverage for editing existing logged time
+* [ ] Consider extracting the shared time-entry UI into a reusable `worklogs.py` helper if doing so reduces duplication without complicating the current design
+
+**Next sprint focus:** complete logged-time editing while preserving the existing Add Task Note / Worklog experience and user-configured time-entry behavior.
 
 ### Soft Delete and Recycle Bin
 
