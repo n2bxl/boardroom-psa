@@ -40,7 +40,7 @@ def render_task_note_entry(
             value=0,
         )
 
-        submitted = st.form_submit_button("Add note")
+        submitted = st.form_submit_button("Add note", type="primary")
         if submitted:
             if not note_body.strip():
                 st.warning("Note cannot be empty.")
@@ -63,12 +63,17 @@ def render_task_note_history(
     display_tz: str,
     get_setting,
     update_task_note,
+    delete_task_note,
 ):
     preview_limit = int(get_setting("note_preview_length"))
     edit_state_key = "editing_task_note_id"
+    delete_state_key = "confirm_delete_task_note_id"
 
     if edit_state_key not in st.session_state:
         st.session_state[edit_state_key] = None
+
+    if delete_state_key not in st.session_state:
+        st.session_state[delete_state_key] = None
 
     # If the user switched tasks while editing a note,
     # clear the stale edit state.
@@ -78,6 +83,12 @@ def render_task_note_history(
         and st.session_state[edit_state_key] not in visible_note_ids
     ):
         st.session_state[edit_state_key] = None
+
+    if (
+        st.session_state[delete_state_key] is not None
+        and st.session_state[delete_state_key] not in visible_note_ids
+    ):
+        st.session_state[delete_state_key] = None
 
     if existing_notes:
         for note in existing_notes:
@@ -112,11 +123,63 @@ def render_task_note_history(
                 == note.id
             )
 
+            is_confirming_delete = (
+                st.session_state[delete_state_key] == note.id
+            )
+
             with st.expander(
                 label,
-                expanded=is_editing,
+                expanded=is_editing
+                or is_confirming_delete,
             ):
-                if is_editing:
+                if is_confirming_delete:
+                    st.warning(
+                        "Delete this note/worklog? "
+                        "This cannot be undone."
+                    )
+
+                    confirm_col, cancel_delete_col = st.columns(2)
+
+                    with confirm_col:
+                        confirm_delete = st.button(
+                            "Confirm delete",
+                            key=f"confirm_delete_task_note_{note.id}",
+                            type="primary",
+                            width="stretch"
+                        )
+
+                    with cancel_delete_col:
+                        cancel_delete = st.button(
+                            "Cancel",
+                            key=f"cancel_delete_task_note_{note.id}",
+                            width="stretch"
+                        )
+
+                    if confirm_delete:
+                        delete_task_note(note.id)
+
+                        st.session_state[
+                            edit_state_key
+                        ] = None
+
+                        st.session_state[
+                            delete_state_key
+                        ] = None
+
+                        st.rerun()
+
+                    if cancel_delete:
+                        st.session_state[
+                            delete_state_key
+                        ] = None
+
+                        st.session_state[
+                            edit_state_key
+                        ] = note.id
+
+                        st.rerun()
+
+                elif is_editing:
                     with st.form(
                         f"edit_task_note_{note.id}"
                     ):
@@ -130,22 +193,39 @@ def render_task_note_history(
                             ),
                         )
 
-                        save_col, cancel_col = st.columns(2)
+                        save_col, cancel_col, delete_col = st.columns(3)
 
                         with save_col:
                             save_edit = (
                                 st.form_submit_button(
                                     "Save note",
                                     type="primary",
+                                    width="stretch"
                                 )
                             )
 
                         with cancel_col:
                             cancel_edit = (
                                 st.form_submit_button(
-                                    "Cancel"
+                                    "Cancel",
+                                    width="stretch"
                                 )
                             )
+
+                        with delete_col:
+                            delete_edit = (
+                                st.form_submit_button(
+                                    "Delete",
+                                    width="stretch"
+                                )
+                            )
+
+                    if delete_edit:
+                        st.session_state[
+                            delete_state_key
+                        ] = note.id
+
+                        st.rerun()
 
                     if cancel_edit:
                         st.session_state[
@@ -196,6 +276,7 @@ def render_task_notes(
         display_tz: str,
         add_task_note,
         update_task_note,
+        delete_task_note,
         get_setting,
 ):
     render_task_note_entry(
@@ -205,8 +286,9 @@ def render_task_notes(
     )
 
     render_task_note_history(
-        existing_notes,
-        display_tz,
-        get_setting,
-        update_task_note,
+        existing_notes=existing_notes,
+        display_tz=display_tz,
+        get_setting=get_setting,
+        update_task_note=update_task_note,
+        delete_task_note=delete_task_note,
     )

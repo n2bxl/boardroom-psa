@@ -213,3 +213,57 @@ def test_update_task_note_rejects_empty_body(temp_db):
     unchanged = db.list_task_notes(task_id)[0]
 
     assert unchanged.body == "Original worklog"
+
+def test_delete_task_note_removes_note_and_updates_time_total(
+        temp_db,
+        monkeypatch,
+):
+    task_id = db.add_task(
+        title="Task with deletable worklog",
+        priority="Medium",
+        due_date=None,
+    )
+
+    db.add_task_note(
+        task_id,
+        "Keep this worklog",
+        time_spent_minutes=20,
+    )
+    db.add_task_note(
+        task_id,
+        "Delete this worklog",
+        time_spent_minutes=40,
+    )
+
+    notes = db.list_task_notes(task_id)
+    note_to_delete = next(
+        note
+        for note in notes
+        if note.body == "Delete this worklog"
+    )
+
+    assert db.get_task_time_total(task_id) == 60
+
+    deleted_at = "2099-01-01T12:00:00+00:00"
+    monkeypatch.setattr(
+        db,
+        "utc_now_iso",
+        lambda: deleted_at,
+    )
+
+    db.delete_task_note(note_to_delete.id)
+
+    remaining_notes = db.list_task_notes(task_id)
+
+    assert len(remaining_notes) == 1
+    assert remaining_notes[0].body == "Keep this worklog"
+    assert db.get_task_time_total(task_id) == 20
+    assert db.get_task(task_id).updated_at == deleted_at
+
+
+def test_delete_task_note_rejects_missing_note(temp_db):
+    try:
+        db.delete_task_note(999999)
+        assert False, "Expected ValueError"
+    except ValueError as exc:
+        assert str(exc) == "Task note not found."

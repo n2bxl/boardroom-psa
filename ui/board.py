@@ -23,6 +23,7 @@ from core.db import (
     update_task_note,
     update_task_title,
     get_task_time_total,
+    delete_task_note,
 )
 from core.date_utils import (
     due_date_sort_key, 
@@ -349,7 +350,7 @@ def render_board(
 
     a1, a2, _ = st.columns([1, 1, 2])
 
-    if a1.button("Save Changes", width="stretch"):
+    if a1.button("Save Changes", type="primary", width="stretch"):
         normalized_due, due_error = normalize_due_date(new_due)
 
         if due_error:
@@ -392,5 +393,6 @@ def render_board(
         display_tz=display_tz,
         add_task_note=add_task_note,
         update_task_note=update_task_note,
+        delete_task_note=delete_task_note,
         get_setting=get_setting
     )

@@ -714,6 +714,42 @@ def update_task_note(
         )
 
 
+def delete_task_note(note_id: int) -> None:
+    now_utc = utc_now_iso()
+
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT task_id
+            FROM task_notes
+            WHERE id = ?
+            """,
+            (note_id,),
+        ).fetchone()
+
+        if row is None:
+            raise ValueError("Task note not found.")
+
+        task_id = int(row["task_id"])
+
+        conn.execute(
+            """
+            DELETE FROM task_notes
+            WHERE id = ?
+            """,
+            (note_id,),
+        )
+
+        conn.execute(
+            """
+            UPDATE tasks
+            SET updated_at = ?
+            WHERE id = ?
+            """,
+            (now_utc, task_id),
+        )
+
+
 def list_task_notes(task_id: int, limit: int = 50) -> list[TaskNote]:
     with get_conn() as conn:
         rows = conn.execute(

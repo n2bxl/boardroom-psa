@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 We follow Semantic Versioning (MAJOR.MINOR.PATCH).
 
 ---
+## [0.6.2] - Task Notes and Worklog Maintenance
+
+### Added
+
+* Edit actions for task notes and worklog entries
+* Delete actions for task notes and worklog entries
+* Confirmation flow before deleting a task note
+* Streamlit AppTest regression coverage for rendered task-note interactions
+* Regression coverage for task-note deletion and logged-time recalculation
+
+### Improved
+
+* Task notes remain read-only until explicitly placed into Edit mode
+* Delete actions are only available while editing a task note
+* Canceling a delete confirmation returns the note to Edit mode
+* Editing or deleting worklog entries updates the parent task activity timestamp
+* Logged-time totals immediately reflect edited or deleted worklog entries
+* Board task selection remains stable through task-note edit and delete reruns
+* Task-note Save, Cancel, and Delete actions now use evenly stretched button layouts
+* Save actions use consistent primary-button styling across Task Notes and standalone Notes
+
+### Fixed
+
+* Task-note edit state now clears correctly after saving changes
+* Task-note interaction paths that were not previously exercised by automated tests now have UI regression coverage
+
+---
 ## [0.6.1] - Board Reliability and Persistent Settings
 
 ### Added

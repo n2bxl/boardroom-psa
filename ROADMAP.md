@@ -53,9 +53,9 @@ Historical task notes should primarily behave as records to read. Editing or del
 * [x] Preserve existing logged time and timestamps when only note text is edited
 * [x] Update task activity timestamps after note edits
 * [x] Add regression coverage for task-note editing
+* [x] Preserve the selected task after worklog edits and deletions
 * [ ] Allow logged time on an existing worklog entry to be corrected
 * [ ] Ensure edited time entries immediately update task time totals
-* [ ] Preserve the selected task after all worklog changes
 
 ### Soft Delete and Recycle Bin
 
@@ -81,14 +81,23 @@ Initial goals:
 
 ### Task Note Deletion
 
-Task Notes should be the first feature to use the generalized soft-delete system.
+Task Notes are the first record type being prepared for the generalized soft-delete system.
 
-* [ ] Show **Delete** only after entering task-note Edit mode
-* [ ] Require a deliberate confirmation step before deletion
-* [ ] Soft-delete the note instead of immediately removing it
+The current deletion workflow intentionally establishes the user-facing interaction and database contract first. Until the generalized soft-delete infrastructure is implemented, deletion removes the task-note row immediately after explicit confirmation.
+
+* [x] Show **Delete** only after entering task-note Edit mode
+* [x] Require a deliberate confirmation step before deletion
+* [x] Return to Edit mode when deletion is canceled
+* [x] Preserve the selected task after deleting a task note
+* [x] Recalculate logged-time totals when deleting a worklog entry
+* [x] Update parent task activity after deleting a task note
+* [x] Add database regression coverage for task-note deletion
+* [x] Add UI regression coverage for rendering, entering Edit mode, canceling deletion, and confirming deletion
+* [x] Keep task-note action buttons visually consistent across Save, Cancel, and Delete actions
+* [ ] Replace immediate row deletion with the generalized soft-delete lifecycle
 * [ ] Restore deleted notes through the Recycle Bin
-* [ ] Preserve logged-time correctness when deleting or restoring a worklog
-* [ ] Add regression tests for deleting, restoring, and permanently purging task notes
+* [ ] Preserve logged-time correctness when restoring a deleted worklog
+* [ ] Add regression tests for restoring and permanently purging task notes
 
 ### Initial Context and Pinning
 
@@ -116,13 +125,15 @@ Tasks without due dates should represent backlog or exploratory work rather than
 ### Task Lifecycle Refinement
 
 * [x] Make the stale-task threshold configurable
-* [ ] Add a visible stale indicator to task displays where useful
-* [ ] Consider quick actions for:
 
+* [ ] Add a visible stale indicator to task displays where useful
+
+* [ ] Consider quick actions for:
   * Defer
   * Archive
   * Schedule
   * Move to backlog
+
 * [ ] Ensure lifecycle actions remain compatible with Daily Triage
 
 ### User-Controlled Backup
@@ -370,6 +381,7 @@ Daily Triage and the AI Boardroom should complement each other rather than dupli
   * Executive Briefing
   * Daily Briefing
   * The Room
+
 * [ ] Keep terminology consistent across UI, documentation, reports, and buttons
 
 ### Final Pre-1.0 UX Pass
@@ -574,6 +586,9 @@ Possible future additions:
 * [x] Log time through worklogs
 * [x] Edit task-note text
 * [x] Render task-note Markdown in read-only mode
+* [x] Delete task notes through an explicit Edit and confirmation workflow
+* [x] Recalculate task time totals after deleting worklog entries
+* [x] Update parent task activity after task-note deletion
 * [x] Edit standalone notes
 * [x] Delete standalone notes
 
@@ -594,6 +609,7 @@ Possible future additions:
 * [x] Validate due dates before storage
 * [x] Protect active task selection during Streamlit reruns
 * [x] Add regression testing for previously observed navigation and worklog failures
+* [x] Add Streamlit UI regression coverage for task-note rendering and deletion workflows
 * [x] Establish automated GitHub Actions testing
 
 ---

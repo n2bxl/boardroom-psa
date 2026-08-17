@@ -57,7 +57,7 @@ def render_note_create_form(get_setting):
             index=0,
         )
 
-        submitted = st.form_submit_button("Save note")
+        submitted = st.form_submit_button("Save note", type="primary")
 
         if submitted:
             selected_task_id = dict(task_options).get(selected_task_label)
@@ -110,8 +110,8 @@ def render_note_edit_form(note, get_setting):
         )
 
         c1, c2 = st.columns(2)
-        save_clicked = c1.form_submit_button("Save")
-        cancel_clicked = c2.form_submit_button("Cancel")
+        save_clicked = c1.form_submit_button("Save",type="primary", width="stretch")
+        cancel_clicked = c2.form_submit_button("Cancel", width="stretch")
 
         if save_clicked:
             selected_task_id = dict(task_options).get(selected_task_label)
